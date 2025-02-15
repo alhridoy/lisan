@@ -92,7 +92,7 @@ export default function SummaryTab() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {summaryMutation.data.summaries.map((summary, index) => (
+                {summaryMutation.data?.summaries?.map((summary, index) => (
                   <TableRow key={index}>
                     <TableCell className="font-medium">{summary.title}</TableCell>
                     <TableCell>{summary.mainFindings}</TableCell>
