@@ -12,11 +12,16 @@ export async function searchSemanticScholar(query: string, offset = 0, limit = 1
     }
   });
 
-  const papers = response.data.data.map((paper: any) => ({
-    title: paper.title,
+  if (!response.data || !Array.isArray(response.data.data)) {
+    console.error("Unexpected API response:", response.data);
+    return [];
+  }
+
+  return response.data.data.map((paper: any) => ({
+    title: paper.title || "Untitled",
     abstract: paper.abstract || "No abstract available",
-    authors: paper.authors.map((author: any) => author.name),
-    url: paper.url,
+    authors: (paper.authors || []).map((author: any) => author.name || "Unknown"),
+    url: paper.url || `https://www.semanticscholar.org/paper/${paper.paperId}`,
     sourceId: paper.paperId,
     source: "semantic-scholar",
     pdf_url: null,
@@ -26,6 +31,4 @@ export async function searchSemanticScholar(query: string, offset = 0, limit = 1
       original_response: paper
     }
   }));
-
-  return papers;
 }

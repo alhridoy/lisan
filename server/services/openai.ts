@@ -24,6 +24,7 @@ export async function semanticSearch(query: string): Promise<string> {
     response_format: { type: "json_object" }
   });
 
-  const result = JSON.parse(response.choices[0].message.content);
-  return result.enhancedQuery;
+  const content = response.choices[0].message.content || "{}";
+  const result = JSON.parse(content);
+  return result.enhancedQuery || query;
 }
