@@ -35,7 +35,9 @@ export default function SummaryTab() {
   const summaryMutation = useMutation({
     mutationFn: async (searchQuery: string) => {
       const res = await apiRequest("POST", "/api/summarize", { query: searchQuery });
-      return res.json() as Promise<SummaryResponse>;
+      const data = await res.json() as SummaryResponse;
+      console.log("Summary response:", data); // Add logging
+      return data;
     },
     onError: (error) => {
       toast({
@@ -74,35 +76,41 @@ export default function SummaryTab() {
         </div>
       ) : summaryMutation.data ? (
         <div className="space-y-6">
+          {/* Overview Card */}
           <Card>
             <CardContent className="p-6">
               <h3 className="text-lg font-semibold mb-2">Overview</h3>
-              <p className="text-muted-foreground">{summaryMutation.data.overview}</p>
+              <p className="text-muted-foreground whitespace-pre-line">
+                {summaryMutation.data.overview}
+              </p>
             </CardContent>
           </Card>
 
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[300px]">Paper</TableHead>
-                  <TableHead>Main Findings</TableHead>
-                  <TableHead>Methodology</TableHead>
-                  <TableHead>Outcomes</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {summaryMutation.data?.summaries?.map((summary, index) => (
-                  <TableRow key={index}>
-                    <TableCell className="font-medium">{summary.title}</TableCell>
-                    <TableCell>{summary.mainFindings}</TableCell>
-                    <TableCell>{summary.methodology}</TableCell>
-                    <TableCell>{summary.outcomes}</TableCell>
+          {/* Results Table */}
+          {summaryMutation.data.summaries && summaryMutation.data.summaries.length > 0 && (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[200px]">Paper</TableHead>
+                    <TableHead className="w-[250px]">Main Findings</TableHead>
+                    <TableHead className="w-[250px]">Methodology</TableHead>
+                    <TableHead>Outcomes</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {summaryMutation.data.summaries.map((summary, index) => (
+                    <TableRow key={index}>
+                      <TableCell className="font-medium align-top">{summary.title}</TableCell>
+                      <TableCell className="align-top">{summary.mainFindings}</TableCell>
+                      <TableCell className="align-top">{summary.methodology}</TableCell>
+                      <TableCell className="align-top">{summary.outcomes}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </div>
       ) : null}
     </div>

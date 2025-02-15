@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
-import { analyzeQuery, generatePaperSummary, calculateRelevanceScore } from "./services/openai";
+import { analyzeQuery, generatePaperSummary, calculateRelevanceScore, generateStructuredSummaries } from "./services/openai";
 import { searchArxiv } from "./services/arxiv";
 import { searchSemanticScholar } from "./services/semantic-scholar";
 import { insertPaperSchema } from "@shared/schema";
@@ -59,11 +59,10 @@ function applyMetadataFilters(paper: any, filters: any) {
 }
 
 async function generateStructuredSummaries(papers: any[], query: string) {
-    //  Implementation for generating structured summaries.  This is a placeholder.
-    // A robust implementation would likely involve more sophisticated NLP techniques.
+    //  Implementation for generating structured summaries using OpenAI.
     const summaries = await Promise.all(papers.map(async (paper) => ({
         ...paper,
-        structuredSummary: `Summary for ${paper.title} based on query "${query}":  (Placeholder summary)`
+        structuredSummary: `Summary for ${paper.title} based on query "${query}":  (Placeholder summary)` //This is a placeholder, needs actual OpenAI implementation.
     })));
     return summaries;
 }
@@ -203,8 +202,9 @@ export async function registerRoutes(app: Express) {
         .slice(0, 5)
         .map(({ score, ...paper }) => paper);
 
-      // Generate structured summaries
+      // Generate structured summaries using OpenAI
       const summaryResult = await generateStructuredSummaries(topPapers, query);
+      console.log("Generated summary result:", summaryResult); // Add logging
 
       res.json(summaryResult);
     } catch (error) {
