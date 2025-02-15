@@ -85,3 +85,43 @@ Paper Metadata: ${JSON.stringify(paper.metadata)}`;
   const result = JSON.parse(content);
   return result.score || 0;
 }
+
+interface PaperSummaryStructure {
+  title: string;
+  mainFindings: string;
+  methodology: string;
+  outcomes: string;
+}
+
+export async function generateStructuredSummaries(
+  papers: { title: string; abstract: string }[],
+  query: string
+): Promise<{
+  summaries: PaperSummaryStructure[];
+  overview: string;
+}> {
+  const prompt = `Analyze these academic papers related to "${query}" and create:
+1. A structured summary for each paper with main findings, methodology, and outcomes
+2. A high-level overview of the collective insights
+
+Return a JSON object with:
+- summaries: array of { title, mainFindings, methodology, outcomes }
+- overview: string summarizing key themes and insights
+
+Papers to analyze:
+${papers.map(p => `Title: ${p.title}\nAbstract: ${p.abstract}\n---`).join('\n')}`;
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [{ role: "user", content: prompt }],
+    response_format: { type: "json_object" }
+  });
+
+  const content = response.choices[0].message.content || "{}";
+  const result = JSON.parse(content);
+
+  return {
+    summaries: result.summaries || [],
+    overview: result.overview || "No overview available"
+  };
+}

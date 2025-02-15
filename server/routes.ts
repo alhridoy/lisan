@@ -21,7 +21,7 @@ function applyMetadataFilters(paper: any, filters: any) {
   // Author check
   if (authors?.length > 0) {
     const paperAuthors = paper.authors.map((a: string) => a.toLowerCase());
-    if (!authors.some((author: string) => 
+    if (!authors.some((author: string) =>
       paperAuthors.some(paperAuthor => paperAuthor.includes(author.toLowerCase()))
     )) {
       return false;
@@ -39,7 +39,7 @@ function applyMetadataFilters(paper: any, filters: any) {
   // Subject check
   if (subjects?.length > 0 && paper.metadata?.subjects) {
     const paperSubjects = paper.metadata.subjects.map((s: string) => s.toLowerCase());
-    if (!subjects.some((subject: string) => 
+    if (!subjects.some((subject: string) =>
       paperSubjects.some(paperSubject => paperSubject.includes(subject.toLowerCase()))
     )) {
       return false;
@@ -57,6 +57,17 @@ function applyMetadataFilters(paper: any, filters: any) {
 
   return true;
 }
+
+async function generateStructuredSummaries(papers: any[], query: string) {
+    //  Implementation for generating structured summaries.  This is a placeholder.
+    // A robust implementation would likely involve more sophisticated NLP techniques.
+    const summaries = await Promise.all(papers.map(async (paper) => ({
+        ...paper,
+        structuredSummary: `Summary for ${paper.title} based on query "${query}":  (Placeholder summary)`
+    })));
+    return summaries;
+}
+
 
 export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);
@@ -133,7 +144,7 @@ export async function registerRoutes(app: Express) {
         .sort((a, b) => b.score - a.score)
         .map(({ score, ...paper }) => paper);
 
-      res.json({ 
+      res.json({
         results: sortedResults,
         metadata: {
           filters: analysis.filters,
@@ -143,6 +154,62 @@ export async function registerRoutes(app: Express) {
     } catch (error) {
       console.error("Search error:", error);
       res.status(500).json({ error: "Failed to perform search" });
+    }
+  });
+
+  app.post("/api/summarize", async (req, res) => {
+    try {
+      const { query } = req.body;
+      if (!query || typeof query !== "string") {
+        return res.status(400).json({ error: "Invalid query" });
+      }
+
+      // Add to search history
+      await storage.addSearchHistory({
+        query,
+        timestamp: new Date()
+      });
+
+      // First, analyze query and get relevant papers
+      const analysis = await analyzeQuery(query);
+      const [arxivResults, semanticScholarResults] = await Promise.all([
+        searchArxiv(analysis.enhancedQuery),
+        searchSemanticScholar(analysis.enhancedQuery)
+      ]);
+
+      // Combine and filter results
+      const allResults = [...arxivResults, ...semanticScholarResults];
+      const filteredResults = [];
+      const seenIds = new Set();
+
+      for (const paper of allResults) {
+        if (!seenIds.has(paper.sourceId) && applyMetadataFilters(paper, analysis.filters)) {
+          seenIds.add(paper.sourceId);
+          filteredResults.push(paper);
+        }
+      }
+
+      // Get relevance scores
+      const scoredResults = await Promise.all(
+        filteredResults.map(async (paper) => ({
+          ...paper,
+          score: await calculateRelevanceScore(paper, query)
+        }))
+      );
+
+      // Sort by score and take top 5 papers
+      const topPapers = scoredResults
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5)
+        .map(({ score, ...paper }) => paper);
+
+      // Generate structured summaries
+      const summaryResult = await generateStructuredSummaries(topPapers, query);
+
+      res.json(summaryResult);
+    } catch (error) {
+      console.error("Summary generation error:", error);
+      res.status(500).json({ error: "Failed to generate summary" });
     }
   });
 
@@ -181,7 +248,7 @@ function calculateKeywordScore(text: string, keywords: string[]): number {
       score += 0.3;
     }
     // Partial match has lower weight
-    else if (normalizedText.split(' ').some(word => 
+    else if (normalizedText.split(' ').some(word =>
       word.includes(normalizedKeyword) || normalizedKeyword.includes(word)
     )) {
       score += 0.1;
