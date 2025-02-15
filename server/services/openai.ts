@@ -16,24 +16,28 @@ export async function generatePaperSummary(abstract: string): Promise<string> {
 }
 
 interface QueryAnalysis {
+  filters: {
+    yearRange?: { start?: number; end?: number };
+    authors?: string[];
+    venues?: string[];
+    subjects?: string[];
+    keywords: string[];
+  };
   enhancedQuery: string;
-  keywords: string[];
-  subjects: string[];
-  yearRange?: { start?: number; end?: number };
 }
 
-export async function semanticSearch(query: string): Promise<QueryAnalysis> {
-  const prompt = `Analyze this academic search query and return a JSON object with the following fields:
-- enhancedQuery: an expanded academic search query
-- keywords: array of important technical terms and concepts
-- subjects: array of relevant academic fields
-- yearRange: object with optional start and end years if mentioned
-Example input: "recent papers on transformer architecture in NLP"
+export async function analyzeQuery(query: string): Promise<QueryAnalysis> {
+  const prompt = `Analyze this academic search query and return a JSON object with metadata filters and an enhanced query.
+Example input: "deep learning papers by Yoshua Bengio after 2020 in ICML"
 Example output: {
-  "enhancedQuery": "transformer neural architecture natural language processing deep learning attention mechanism",
-  "keywords": ["transformer", "attention mechanism", "neural architecture", "NLP"],
-  "subjects": ["Computer Science", "Machine Learning", "Natural Language Processing"],
-  "yearRange": { "start": 2020 }
+  "filters": {
+    "yearRange": { "start": 2020 },
+    "authors": ["Yoshua Bengio"],
+    "venues": ["ICML"],
+    "subjects": ["Computer Science", "Machine Learning"],
+    "keywords": ["deep learning", "neural networks"]
+  },
+  "enhancedQuery": "deep learning neural networks machine learning artificial intelligence"
 }
 
 Query to analyze: ${query}`;
@@ -48,27 +52,28 @@ Query to analyze: ${query}`;
   const result = JSON.parse(content);
 
   return {
-    enhancedQuery: result.enhancedQuery || query,
-    keywords: result.keywords || [],
-    subjects: result.subjects || [],
-    yearRange: result.yearRange
+    filters: {
+      yearRange: result.filters?.yearRange,
+      authors: result.filters?.authors || [],
+      venues: result.filters?.venues || [],
+      subjects: result.filters?.subjects || [],
+      keywords: result.filters?.keywords || []
+    },
+    enhancedQuery: result.enhancedQuery || query
   };
 }
 
-// Function to calculate relevance score between query and paper
 export async function calculateRelevanceScore(
-  paper: { title: string; abstract: string },
-  query: string,
-  queryAnalysis: QueryAnalysis
+  paper: { title: string; abstract: string; metadata: any },
+  query: string
 ): Promise<number> {
   const prompt = `Rate the relevance of this academic paper to the search query on a scale of 0 to 1.
 Return only a JSON object with a single "score" field containing a number.
 
 Search Query: ${query}
-Search Context: ${JSON.stringify(queryAnalysis)}
-
 Paper Title: ${paper.title}
-Paper Abstract: ${paper.abstract}`;
+Paper Abstract: ${paper.abstract}
+Paper Metadata: ${JSON.stringify(paper.metadata)}`;
 
   const response = await openai.chat.completions.create({
     model: "gpt-4o",

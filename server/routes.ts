@@ -1,30 +1,61 @@
 import type { Express } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
-import { semanticSearch, generatePaperSummary, calculateRelevanceScore } from "./services/openai";
+import { analyzeQuery, generatePaperSummary, calculateRelevanceScore } from "./services/openai";
 import { searchArxiv } from "./services/arxiv";
 import { searchSemanticScholar } from "./services/semantic-scholar";
 import { insertPaperSchema } from "@shared/schema";
 
-function calculateKeywordScore(text: string, keywords: string[]): number {
-  const normalizedText = text.toLowerCase();
-  let score = 0;
+function applyMetadataFilters(paper: any, filters: any) {
+  const { yearRange, authors, venues, subjects, keywords } = filters;
 
-  for (const keyword of keywords) {
-    const normalizedKeyword = keyword.toLowerCase();
-    // Exact match has higher weight
-    if (normalizedText.includes(normalizedKeyword)) {
-      score += 0.3;
-    }
-    // Partial match has lower weight
-    else if (normalizedText.split(' ').some(word => 
-      word.includes(normalizedKeyword) || normalizedKeyword.includes(word)
-    )) {
-      score += 0.1;
+  // Year range check
+  if (yearRange) {
+    const paperYear = paper.metadata?.year;
+    if (paperYear) {
+      if (yearRange.start && paperYear < yearRange.start) return false;
+      if (yearRange.end && paperYear > yearRange.end) return false;
     }
   }
 
-  return Math.min(1, score); // Normalize to [0,1]
+  // Author check
+  if (authors?.length > 0) {
+    const paperAuthors = paper.authors.map((a: string) => a.toLowerCase());
+    if (!authors.some((author: string) => 
+      paperAuthors.some(paperAuthor => paperAuthor.includes(author.toLowerCase()))
+    )) {
+      return false;
+    }
+  }
+
+  // Venue check
+  if (venues?.length > 0 && paper.metadata?.venue) {
+    const paperVenue = paper.metadata.venue.toLowerCase();
+    if (!venues.some((venue: string) => paperVenue.includes(venue.toLowerCase()))) {
+      return false;
+    }
+  }
+
+  // Subject check
+  if (subjects?.length > 0 && paper.metadata?.subjects) {
+    const paperSubjects = paper.metadata.subjects.map((s: string) => s.toLowerCase());
+    if (!subjects.some((subject: string) => 
+      paperSubjects.some(paperSubject => paperSubject.includes(subject.toLowerCase()))
+    )) {
+      return false;
+    }
+  }
+
+  // Keyword check
+  if (keywords?.length > 0) {
+    const paperText = (paper.title + ' ' + paper.abstract).toLowerCase();
+    const hasKeyword = keywords.some((keyword: string) =>
+      paperText.includes(keyword.toLowerCase())
+    );
+    if (!hasKeyword) return false;
+  }
+
+  return true;
 }
 
 export async function registerRoutes(app: Express) {
@@ -43,46 +74,40 @@ export async function registerRoutes(app: Express) {
         timestamp: new Date()
       });
 
-      // Get enhanced query and analysis
-      const queryAnalysis = await semanticSearch(query);
+      // First, analyze query to extract filters and enhanced query
+      const analysis = await analyzeQuery(query);
 
-      // Search both APIs in parallel
+      // Search both APIs in parallel with enhanced query
       const [arxivResults, semanticScholarResults] = await Promise.all([
-        searchArxiv(queryAnalysis.enhancedQuery),
-        searchSemanticScholar(queryAnalysis.enhancedQuery)
+        searchArxiv(analysis.enhancedQuery),
+        searchSemanticScholar(analysis.enhancedQuery)
       ]);
 
-      // Combine results and calculate scores
+      // Combine results and apply metadata filters first
       const allResults = [...arxivResults, ...semanticScholarResults];
-      const scoredResults = [];
+      const filteredResults = [];
       const seenIds = new Set();
 
       for (const paper of allResults) {
-        if (!seenIds.has(paper.sourceId)) {
+        if (!seenIds.has(paper.sourceId) && applyMetadataFilters(paper, analysis.filters)) {
           seenIds.add(paper.sourceId);
+
+          // Check if paper already exists in storage
           const existingPaper = await storage.findPaperBySourceId(paper.sourceId);
 
           if (existingPaper) {
-            // Calculate hybrid score for existing paper
-            const keywordScore = calculateKeywordScore(
-              existingPaper.title + ' ' + existingPaper.abstract,
-              queryAnalysis.keywords
-            );
-            const semanticScore = await calculateRelevanceScore(
+            // Calculate relevance score for ranking
+            const relevanceScore = await calculateRelevanceScore(
               existingPaper,
-              query,
-              queryAnalysis
+              query
             );
 
-            // Combine scores (60% semantic, 40% keyword)
-            const hybridScore = (semanticScore * 0.6) + (keywordScore * 0.4);
-
-            scoredResults.push({
+            filteredResults.push({
               ...existingPaper,
-              score: hybridScore
+              score: relevanceScore
             });
           } else {
-            // Generate summary and calculate scores for new paper
+            // Generate summary and store new paper
             const summary = await generatePaperSummary(paper.abstract);
             const validated = insertPaperSchema.parse({
               ...paper,
@@ -90,36 +115,28 @@ export async function registerRoutes(app: Express) {
             });
             const saved = await storage.insertPaper(validated);
 
-            const keywordScore = calculateKeywordScore(
-              paper.title + ' ' + paper.abstract,
-              queryAnalysis.keywords
-            );
-            const semanticScore = await calculateRelevanceScore(
-              paper,
-              query,
-              queryAnalysis
+            const relevanceScore = await calculateRelevanceScore(
+              saved,
+              query
             );
 
-            const hybridScore = (semanticScore * 0.6) + (keywordScore * 0.4);
-
-            scoredResults.push({
+            filteredResults.push({
               ...saved,
-              score: hybridScore
+              score: relevanceScore
             });
           }
         }
       }
 
-      // Sort by score and return top results
-      const sortedResults = scoredResults
+      // Sort by relevance score and return results
+      const sortedResults = filteredResults
         .sort((a, b) => b.score - a.score)
         .map(({ score, ...paper }) => paper);
 
       res.json({ 
         results: sortedResults,
         metadata: {
-          query: queryAnalysis.enhancedQuery,
-          subjects: queryAnalysis.subjects,
+          filters: analysis.filters,
           totalResults: sortedResults.length
         }
       });
@@ -151,4 +168,25 @@ export async function registerRoutes(app: Express) {
   });
 
   return httpServer;
+}
+
+function calculateKeywordScore(text: string, keywords: string[]): number {
+  const normalizedText = text.toLowerCase();
+  let score = 0;
+
+  for (const keyword of keywords) {
+    const normalizedKeyword = keyword.toLowerCase();
+    // Exact match has higher weight
+    if (normalizedText.includes(normalizedKeyword)) {
+      score += 0.3;
+    }
+    // Partial match has lower weight
+    else if (normalizedText.split(' ').some(word => 
+      word.includes(normalizedKeyword) || normalizedKeyword.includes(word)
+    )) {
+      score += 0.1;
+    }
+  }
+
+  return Math.min(1, score); // Normalize to [0,1]
 }
