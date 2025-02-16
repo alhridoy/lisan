@@ -105,8 +105,17 @@ export async function generateStructuredSummaries(
 2. A high-level overview of the collective insights
 
 Return a JSON object with:
-- summaries: array of { title, mainFindings, methodology, outcomes }
-- overview: string summarizing key themes and insights
+{
+  "summaries": [
+    {
+      "title": "paper title",
+      "mainFindings": "key findings and conclusions",
+      "methodology": "research methods used",
+      "outcomes": "results and implications"
+    }
+  ],
+  "overview": "synthesis of key themes and insights across all papers"
+}
 
 Papers to analyze:
 ${papers.map(p => `Title: ${p.title}\nAbstract: ${p.abstract}\n---`).join('\n')}`;
@@ -114,7 +123,8 @@ ${papers.map(p => `Title: ${p.title}\nAbstract: ${p.abstract}\n---`).join('\n')}
   const response = await openai.chat.completions.create({
     model: "gpt-4o",
     messages: [{ role: "user", content: prompt }],
-    response_format: { type: "json_object" }
+    response_format: { type: "json_object" },
+    max_tokens: 1500
   });
 
   const content = response.choices[0].message.content || "{}";

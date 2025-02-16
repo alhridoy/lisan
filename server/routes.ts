@@ -58,15 +58,6 @@ function applyMetadataFilters(paper: any, filters: any) {
   return true;
 }
 
-async function generateStructuredSummaries(papers: any[], query: string) {
-    //  Implementation for generating structured summaries using OpenAI.
-    const summaries = await Promise.all(papers.map(async (paper) => ({
-        ...paper,
-        structuredSummary: `Summary for ${paper.title} based on query "${query}":  (Placeholder summary)` //This is a placeholder, needs actual OpenAI implementation.
-    })));
-    return summaries;
-}
-
 
 export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);
@@ -204,7 +195,7 @@ export async function registerRoutes(app: Express) {
 
       // Generate structured summaries using OpenAI
       const summaryResult = await generateStructuredSummaries(topPapers, query);
-      console.log("Generated summary result:", summaryResult); // Add logging
+      console.log("Generated summary result:", summaryResult);
 
       res.json(summaryResult);
     } catch (error) {
