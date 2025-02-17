@@ -25,7 +25,7 @@ async function generateSearchQueries(query: string): Promise<string[]> {
 
 export async function searchWeb(query: string): Promise<{
   response: string;
-  citations: string[];
+  citations: Array<{url: string, domain: string}>;
   searchStatus: {
     queries: string[];
     searched: boolean;
@@ -65,8 +65,11 @@ export async function searchWeb(query: string): Promise<{
 
     const searchResults = searchData.results || [];
 
-    // Extract URLs for citations
-    const citations = searchResults.map((result: any) => result.url);
+    // Extract URLs and domains for citations
+    const citations = searchResults.map((result: any) => ({
+      url: result.url,
+      domain: new URL(result.url).hostname
+    }));
 
     // Use OpenAI to generate a coherent response from the search results
     const openai = new OpenAI();
@@ -102,7 +105,7 @@ export async function searchWeb(query: string): Promise<{
 
     return {
       response: completion.choices[0].message.content || "No response generated",
-      citations: citations,
+      citations,
       searchStatus: {
         queries: searchQueries,
         searched: true,

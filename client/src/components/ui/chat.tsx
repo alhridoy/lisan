@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 interface Message {
   role: "user" | "assistant";
   content: string;
-  citations?: string[];
+  citations?: Array<{url: string, domain: string}>;
   searchStatus?: {
     queries?: string[];
     searched?: boolean;
@@ -145,14 +145,15 @@ export function ChatInterface({
                     </p>
                     <ul className="text-xs space-y-1 text-muted-foreground">
                       {message.citations.map((citation, i) => (
-                        <li key={i}>
+                        <li key={i} className="flex items-center gap-1">
+                          <Globe className="w-3 h-3" />
                           <a
-                            href={citation}
+                            href={citation.url}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="hover:underline hover:text-primary"
                           >
-                            {citation}
+                            {citation.domain}
                           </a>
                         </li>
                       ))}
