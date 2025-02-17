@@ -48,25 +48,12 @@ export async function extractTextFromDocument(filePath: string): Promise<string>
     // Process PDF
     try {
       // Import pdf-parse dynamically to avoid initialization issues
-      const pdfParse = await import('pdf-parse');
-      const PDFParser = pdfParse.default;
+      const PDFParser = (await import('pdf-parse')).default;
 
       console.log('PDF parser initialized, processing file...');
 
-      // Create a data object with the buffer
-      const dataBuffer = {
-        data: fileBuffer,
-        length: fileBuffer.length
-      };
-
-      const options = {
-        max: 0,  // No page limit
-        pagerender: function(pageData: any) {
-          return pageData.getTextContent();
-        }
-      };
-
-      const pdfData = await PDFParser(dataBuffer, options);
+      // Pass the buffer directly to PDFParser
+      const pdfData = await PDFParser(fileBuffer);
 
       if (!pdfData || !pdfData.text) {
         console.error('No text content extracted from PDF');
