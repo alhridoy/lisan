@@ -29,6 +29,12 @@ export async function extractTextFromDocument(filePath: string): Promise<string>
     const fileBuffer = await fs.readFile(filePath);
     const fileExtension = path.extname(filePath).toLowerCase();
 
+    // Validate file type
+    const validTypes = ['.pdf', '.docx'];
+    if (!validTypes.includes(fileExtension)) {
+      throw new Error('Unsupported file type. Please upload a PDF or DOCX file.');
+    }
+
     if (fileExtension === '.pdf') {
       // Dynamically import pdf-parse only when needed
       const pdf = await import('pdf-parse');
@@ -37,9 +43,9 @@ export async function extractTextFromDocument(filePath: string): Promise<string>
     } else if (fileExtension === '.docx') {
       const result = await mammoth.extractRawText({ buffer: fileBuffer });
       return result.value;
-    } else {
-      throw new Error('Unsupported file type. Please upload a PDF or DOCX file.');
     }
+
+    throw new Error('Unsupported file type. Please upload a PDF or DOCX file.');
   } catch (error: any) {
     console.error('Document processing error:', error);
     throw new Error(`Failed to process document: ${error.message}`);

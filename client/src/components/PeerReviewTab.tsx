@@ -118,25 +118,48 @@ export function PeerReviewTab() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-      const fileType = selectedFile.type;
-      if (
-        fileType === "application/pdf" ||
-        fileType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-      ) {
-        setFile(selectedFile);
-      } else {
+      // Check file extension
+      const fileExtension = selectedFile.name.toLowerCase().split('.').pop();
+      const validExtensions = ['pdf', 'docx'];
+
+      if (!validExtensions.includes(fileExtension || '')) {
         toast({
           title: "Invalid File Type",
           description: "Please upload a PDF or DOCX file",
           variant: "destructive",
         });
+        e.target.value = ''; // Reset input
+        setFile(null);
+        return;
       }
+
+      // Check file size (max 10MB)
+      const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+      if (selectedFile.size > maxSize) {
+        toast({
+          title: "File Too Large",
+          description: "Please upload a file smaller than 10MB",
+          variant: "destructive",
+        });
+        e.target.value = ''; // Reset input
+        setFile(null);
+        return;
+      }
+
+      setFile(selectedFile);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) return;
+    if (!file) {
+      toast({
+        title: "No File Selected",
+        description: "Please select a PDF or DOCX file to review",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const formData = new FormData();
     formData.append("file", file);
@@ -158,8 +181,8 @@ export function PeerReviewTab() {
             onChange={handleFileChange}
             className="flex-1"
           />
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             disabled={!file || reviewMutation.isPending}
           >
             {reviewMutation.isPending ? "Analyzing..." : "Review Paper"}
