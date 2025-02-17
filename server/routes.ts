@@ -14,8 +14,26 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Configure multer for file upload
-const upload = multer({ dest: "uploads/" });
+// Configure multer for file upload with file filter
+const upload = multer({
+  dest: "uploads/",
+  fileFilter: (req, file, cb) => {
+    // Check file mimetype
+    const allowedMimeTypes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
+
+    if (allowedMimeTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Please upload a PDF or DOCX file.'));
+    }
+  },
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
 
 export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);

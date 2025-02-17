@@ -25,24 +25,34 @@ declare module "express" {
 
 export async function extractTextFromDocument(filePath: string): Promise<string> {
   try {
+    // Check if file exists
+    try {
+      await fs.access(filePath);
+    } catch (error) {
+      throw new Error('File not found or inaccessible');
+    }
+
     // Read the file buffer
     const fileBuffer = await fs.readFile(filePath);
     const fileExtension = path.extname(filePath).toLowerCase();
 
     // Validate file type
-    const validTypes = ['.pdf', '.docx'];
-    if (!validTypes.includes(fileExtension)) {
-      throw new Error('Unsupported file type. Please upload a PDF or DOCX file.');
-    }
-
     if (fileExtension === '.pdf') {
-      // Dynamically import pdf-parse only when needed
-      const pdf = await import('pdf-parse');
-      const pdfData = await pdf.default(fileBuffer);
-      return pdfData.text;
+      try {
+        // Dynamically import pdf-parse only when needed
+        const pdf = await import('pdf-parse');
+        const pdfData = await pdf.default(fileBuffer);
+        return pdfData.text;
+      } catch (error) {
+        throw new Error('Failed to parse PDF file. Please ensure the file is not corrupted.');
+      }
     } else if (fileExtension === '.docx') {
-      const result = await mammoth.extractRawText({ buffer: fileBuffer });
-      return result.value;
+      try {
+        const result = await mammoth.extractRawText({ buffer: fileBuffer });
+        return result.value;
+      } catch (error) {
+        throw new Error('Failed to parse DOCX file. Please ensure the file is not corrupted.');
+      }
     }
 
     throw new Error('Unsupported file type. Please upload a PDF or DOCX file.');
