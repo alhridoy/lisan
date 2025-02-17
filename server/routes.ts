@@ -150,6 +150,8 @@ export async function registerRoutes(app: Express) {
   app.post("/api/summarize", async (req, res) => {
     try {
       const { query } = req.body;
+      console.log("Received summarize request with query:", query);
+
       if (!query || typeof query !== "string") {
         return res.status(400).json({ error: "Invalid query" });
       }
@@ -161,11 +163,19 @@ export async function registerRoutes(app: Express) {
       });
 
       // First, analyze query and get relevant papers
+      console.log("Analyzing query...");
       const analysis = await analyzeQuery(query);
+      console.log("Query analysis result:", analysis);
+
       const [arxivResults, semanticScholarResults] = await Promise.all([
         searchArxiv(analysis.enhancedQuery),
         searchSemanticScholar(analysis.enhancedQuery)
       ]);
+
+      console.log("Search results:", {
+        arxivCount: arxivResults.length,
+        semanticScholarCount: semanticScholarResults.length
+      });
 
       // Combine and filter results
       const allResults = [...arxivResults, ...semanticScholarResults];
@@ -178,6 +188,8 @@ export async function registerRoutes(app: Express) {
           filteredResults.push(paper);
         }
       }
+
+      console.log("Filtered results count:", filteredResults.length);
 
       // Get relevance scores
       const scoredResults = await Promise.all(
@@ -193,7 +205,10 @@ export async function registerRoutes(app: Express) {
         .slice(0, 5)
         .map(({ score, ...paper }) => paper);
 
+      console.log("Selected top papers count:", topPapers.length);
+
       // Generate structured summaries using OpenAI
+      console.log("Generating structured summaries...");
       const summaryResult = await generateStructuredSummaries(topPapers, query);
       console.log("Generated summary result:", summaryResult);
 

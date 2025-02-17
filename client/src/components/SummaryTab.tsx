@@ -34,12 +34,14 @@ export default function SummaryTab() {
 
   const summaryMutation = useMutation({
     mutationFn: async (searchQuery: string) => {
+      console.log("Sending search query:", searchQuery);
       const res = await apiRequest("POST", "/api/summarize", { query: searchQuery });
       const data = await res.json() as SummaryResponse;
-      console.log("Summary response:", data); // Add logging
+      console.log("Received summary response:", data);
       return data;
     },
     onError: (error) => {
+      console.error("Summary error:", error);
       toast({
         title: "Summary Generation Failed",
         description: error.message,
@@ -51,8 +53,16 @@ export default function SummaryTab() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
+    console.log("Starting summary generation for query:", query);
     summaryMutation.mutate(query);
   };
+
+  // Debug output
+  console.log("Current mutation state:", {
+    isPending: summaryMutation.isPending,
+    isError: summaryMutation.isError,
+    data: summaryMutation.data
+  });
 
   return (
     <div className="space-y-8">
