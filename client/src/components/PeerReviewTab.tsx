@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 import { isErrorResponse } from "@/lib/api-types";
 import { ChatInterface } from "@/components/ui/chat";
 import { SplitPane } from "@/components/ui/split-pane";
@@ -47,8 +46,9 @@ export function PeerReviewTab() {
 
   const reviewMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      const res = await apiRequest("POST", "/api/peer-review", formData, {
-        isFormData: true,
+      const res = await fetch('/api/peer-review', {
+        method: 'POST',
+        body: formData,
       });
       const data = await res.json();
 
@@ -71,10 +71,16 @@ export function PeerReviewTab() {
   const chatMutation = useMutation({
     mutationFn: async (message: string) => {
       try {
-        const res = await apiRequest("POST", "/api/chat", {
-          message,
-          context: JSON.stringify(reviewMutation.data),
-          type: "peer-review"
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message,
+            context: JSON.stringify(reviewMutation.data),
+            type: "peer-review",
+          }),
         });
 
         const contentType = res.headers.get("content-type");
