@@ -88,9 +88,10 @@ export function DeepResearchTab() {
 
   // Helper function to format references
   const formatReference = (reference: string) => {
-    // Handle cases where the reference starts with "Author Unknown"
-    if (reference.startsWith("Author Unknown")) {
-      return reference.replace("Author Unknown. (n.d.)", "").trim();
+    // Handle cases where the reference starts with "Author Unknown" or "Author(s) Unknown"
+    if (reference.startsWith("Author Unknown") || reference.startsWith("Author(s) Unknown")) {
+      // Keep the full reference format including placeholders
+      return reference;
     }
     return reference.trim();
   };
