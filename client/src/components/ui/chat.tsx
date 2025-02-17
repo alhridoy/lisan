@@ -1,0 +1,125 @@
+import * as React from "react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
+import { MessageCircle, Send, Sparkles } from "lucide-react";
+
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+}
+
+interface ChatInterfaceProps {
+  title?: string;
+  context: string;
+  onSendMessage: (message: string) => Promise<void>;
+  messages: Message[];
+  isLoading?: boolean;
+  className?: string;
+}
+
+export function ChatInterface({
+  title = "Chat",
+  context,
+  onSendMessage,
+  messages,
+  isLoading,
+  className,
+}: ChatInterfaceProps) {
+  const [input, setInput] = React.useState("");
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+
+    const message = input;
+    setInput("");
+    await onSendMessage(message);
+  };
+
+  return (
+    <Card className={cn("flex flex-col h-[600px]", className)}>
+      <div className="px-4 py-2 border-b bg-muted/50">
+        <h3 className="text-sm font-semibold flex items-center gap-2">
+          <MessageCircle className="w-4 h-4" />
+          {title}
+        </h3>
+      </div>
+      <ScrollArea ref={scrollRef} className="flex-1 p-4">
+        <div className="space-y-4">
+          {context && (
+            <div className="bg-muted/50 rounded-lg p-3 text-sm">
+              <p className="text-muted-foreground">{context}</p>
+            </div>
+          )}
+          {messages.map((message, index) => (
+            <div
+              key={index}
+              className={cn(
+                "flex gap-2 text-sm",
+                message.role === "assistant" ? "items-start" : "items-start flex-row-reverse"
+              )}
+            >
+              <div
+                className={cn(
+                  "w-8 h-8 rounded-full flex items-center justify-center",
+                  message.role === "assistant" ? "bg-primary/10" : "bg-muted"
+                )}
+              >
+                {message.role === "assistant" ? (
+                  <Sparkles className="w-4 h-4 text-primary" />
+                ) : (
+                  <MessageCircle className="w-4 h-4" />
+                )}
+              </div>
+              <div
+                className={cn(
+                  "rounded-lg px-3 py-2 max-w-[80%]",
+                  message.role === "assistant"
+                    ? "bg-muted/50 text-foreground"
+                    : "bg-primary text-primary-foreground"
+                )}
+              >
+                {message.content}
+              </div>
+            </div>
+          ))}
+          {isLoading && (
+            <div className="flex gap-2 items-start">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <Sparkles className="w-4 h-4 text-primary animate-pulse" />
+              </div>
+              <div className="bg-muted/50 rounded-lg px-3 py-2">
+                <div className="flex gap-1">
+                  <span className="animate-bounce">•</span>
+                  <span className="animate-bounce delay-100">•</span>
+                  <span className="animate-bounce delay-200">•</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+      <form onSubmit={handleSubmit} className="p-4 border-t flex gap-2">
+        <Input
+          placeholder="Type a message..."
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          disabled={isLoading}
+        />
+        <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
+          <Send className="w-4 h-4" />
+        </Button>
+      </form>
+    </Card>
+  );
+}

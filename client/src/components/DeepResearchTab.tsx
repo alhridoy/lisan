@@ -10,6 +10,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { isErrorResponse } from "@/lib/api-types";
 import { Download } from "lucide-react";
 import { KnowledgeGraph } from "./KnowledgeGraph";
+import { ChatInterface } from "@/components/ui/chat";
+import { SplitPane } from "@/components/ui/split-pane";
 
 interface StudyAnalysis {
   study: string;
@@ -34,8 +36,14 @@ interface DeepResearchResponse {
   };
 }
 
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+}
+
 export function DeepResearchTab() {
   const [query, setQuery] = useState("");
+  const [messages, setMessages] = useState<Message[]>([]);
   const { toast } = useToast();
 
   const researchMutation = useMutation({
@@ -61,10 +69,46 @@ export function DeepResearchTab() {
     },
   });
 
+  const chatMutation = useMutation({
+    mutationFn: async (message: string) => {
+      const res = await apiRequest("POST", "/api/chat", {
+        message,
+        context: JSON.stringify(researchMutation.data),
+        type: "deep-research"
+      });
+      const data = await res.json();
+
+      if (isErrorResponse(data)) {
+        throw new Error(data.error);
+      }
+
+      return data.response as string;
+    },
+    onSuccess: (response, message) => {
+      setMessages(prev => [
+        ...prev,
+        { role: "user", content: message },
+        { role: "assistant", content: response }
+      ]);
+    },
+    onError: (error) => {
+      toast({
+        title: "Chat Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
     researchMutation.mutate(query);
+    setMessages([]);
+  };
+
+  const handleSendMessage = async (message: string) => {
+    await chatMutation.mutate(message);
   };
 
   const handleDownload = () => {
@@ -96,17 +140,6 @@ export function DeepResearchTab() {
     return section.trim();
   };
 
-  // Helper function to format references
-  const formatReference = (reference: string) => {
-    // Handle cases where the reference starts with "Author Unknown" or "Author(s) Unknown"
-    if (reference.startsWith("Author Unknown") || reference.startsWith("Author(s) Unknown")) {
-      // Keep the full reference format including placeholders
-      return reference;
-    }
-    return reference.trim();
-  };
-
-  // Add this helper function for extracting references
   const extractReferences = (text: string | undefined | null): string[] => {
     if (!text || typeof text !== 'string') return [];
 
@@ -117,9 +150,8 @@ export function DeepResearchTab() {
       .trim()
       .split('\n')
       .filter(ref => ref.trim())
-      .map(ref => formatReference(ref));
+      .map(ref => ref.trim());
   };
-
 
   return (
     <div className="space-y-8">
@@ -135,7 +167,6 @@ export function DeepResearchTab() {
         </Button>
       </form>
 
-      {/* Error state */}
       {researchMutation.isError && (
         <Card className="border-destructive">
           <CardContent className="p-6 text-destructive">
@@ -144,7 +175,6 @@ export function DeepResearchTab() {
         </Card>
       )}
 
-      {/* Loading state */}
       {researchMutation.isPending && (
         <div className="space-y-4">
           <Skeleton className="h-40 w-full" />
@@ -152,115 +182,119 @@ export function DeepResearchTab() {
         </div>
       )}
 
-      {/* Results */}
       {researchMutation.data && (
-        <div className="space-y-6">
-          {/* Abstract & Method Section */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle>Abstract & Method</CardTitle>
-              <Button variant="outline" size="sm" onClick={handleDownload}>
-                <Download className="h-4 w-4 mr-2" />
-                Download Report
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <p className="whitespace-pre-wrap">{researchMutation.data.abstractAndMethod}</p>
-            </CardContent>
-          </Card>
+        <SplitPane
+          left={
+            <div className="space-y-6">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle>Research Analysis</CardTitle>
+                  <Button variant="outline" size="sm" onClick={handleDownload}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Download Report
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="prose max-w-none space-y-6">
+                    <div>
+                      <h3 className="font-semibold text-lg">Abstract & Method</h3>
+                      <p className="mt-2">{researchMutation.data.abstractAndMethod}</p>
+                    </div>
 
-          {researchMutation.data?.visualization && (
-            <KnowledgeGraph
-              points={researchMutation.data.visualization.points}
-              query={query}
-            />
-          )}
+                    {researchMutation.data?.visualization && (
+                      <div>
+                        <h3 className="font-semibold text-lg mb-4">Knowledge Graph</h3>
+                        <KnowledgeGraph
+                          points={researchMutation.data.visualization.points}
+                          query={query}
+                        />
+                      </div>
+                    )}
 
-          {/* Results Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Detailed Research Analysis</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Study</TableHead>
-                      <TableHead>Study Type</TableHead>
-                      <TableHead>Research Focus</TableHead>
-                      <TableHead>Analysis</TableHead>
-                      <TableHead>References</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {researchMutation.data.studies.map((study, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">{study.study}</TableCell>
-                        <TableCell>{study.studyType}</TableCell>
-                        <TableCell>{study.researchFocus}</TableCell>
-                        <TableCell className="max-w-md">{study.analysis}</TableCell>
-                        <TableCell className="max-w-xs">
-                          <ul className="list-disc pl-4 space-y-1">
-                            {study.references.map((ref, i) => (
-                              <li key={i} className="text-sm">{ref}</li>
+                    <div>
+                      <h3 className="font-semibold text-lg mb-4">Detailed Analysis</h3>
+                      <div className="rounded-md border">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Study</TableHead>
+                              <TableHead>Type</TableHead>
+                              <TableHead>Focus</TableHead>
+                              <TableHead>Analysis</TableHead>
+                              <TableHead>References</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {researchMutation.data.studies.map((study, index) => (
+                              <TableRow key={index}>
+                                <TableCell className="font-medium">{study.study}</TableCell>
+                                <TableCell>{study.studyType}</TableCell>
+                                <TableCell>{study.researchFocus}</TableCell>
+                                <TableCell className="max-w-md">{study.analysis}</TableCell>
+                                <TableCell className="max-w-xs">
+                                  <ul className="list-disc pl-4 space-y-1">
+                                    {study.references.map((ref, i) => (
+                                      <li key={i} className="text-sm">{ref}</li>
+                                    ))}
+                                  </ul>
+                                </TableCell>
+                              </TableRow>
                             ))}
-                          </ul>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
 
-          {/* Cross-Study Analysis */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Cross-Study Analysis</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="prose max-w-none">
-                <div className="whitespace-pre-wrap">
-                  {extractSection(researchMutation.data.fullText, "Cross-Study Analysis", "Success Metrics")}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                    <div>
+                      <h3 className="font-semibold text-lg">Cross-Study Analysis</h3>
+                      <div className="mt-2 whitespace-pre-wrap">
+                        {extractSection(researchMutation.data.fullText, "Cross-Study Analysis", "Success Metrics")}
+                      </div>
+                    </div>
 
-          {/* Success Metrics & Implementation Requirements */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Implementation Insights</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="prose max-w-none">
-                <div className="whitespace-pre-wrap">
-                  {`Success Metrics:\n${extractSection(researchMutation.data.fullText, "Success Metrics", "Limitations")}\n\nImplementation Requirements:\n${extractSection(researchMutation.data.fullText, "Implementation Requirements", "References")}`}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                    <div>
+                      <h3 className="font-semibold text-lg">Implementation Insights</h3>
+                      <div className="mt-2 space-y-4">
+                        <div>
+                          <h4 className="font-medium">Success Metrics</h4>
+                          <p className="whitespace-pre-wrap">
+                            {extractSection(researchMutation.data.fullText, "Success Metrics", "Implementation Requirements")}
+                          </p>
+                        </div>
+                        <div>
+                          <h4 className="font-medium">Implementation Requirements</h4>
+                          <p className="whitespace-pre-wrap">
+                            {extractSection(researchMutation.data.fullText, "Implementation Requirements", "References")}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
 
-          {/* References */}
-          <Card>
-            <CardHeader>
-              <CardTitle>References</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="prose max-w-none">
-                <div className="space-y-2">
-                  {extractReferences(researchMutation.data?.fullText).map((reference, index) => (
-                    <p key={index} className="text-sm">
-                      {reference}
-                    </p>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                    <div>
+                      <h3 className="font-semibold text-lg">References</h3>
+                      <div className="mt-2 space-y-2">
+                        {extractReferences(researchMutation.data?.fullText).map((reference, index) => (
+                          <p key={index} className="text-sm">
+                            {reference}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          }
+          right={
+            <ChatInterface
+              title="Discuss Research Analysis"
+              context="Ask questions about the research analysis, methodology, findings, or request clarification on specific aspects."
+              messages={messages}
+              onSendMessage={handleSendMessage}
+              isLoading={chatMutation.isPending}
+            />
+          }
+        />
       )}
     </div>
   );

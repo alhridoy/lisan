@@ -7,8 +7,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isErrorResponse } from "@/lib/api-types";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
+import { ChatInterface } from "@/components/ui/chat";
+import { SplitPane } from "@/components/ui/split-pane";
+import { cn } from "@/lib/utils";
 
 interface ExpandedIdea {
   title: string;
@@ -40,8 +43,15 @@ interface RankedIdea {
   evaluation: IdeaEvaluation;
 }
 
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+}
+
 export function NovelResearchTab() {
   const [topic, setTopic] = useState("");
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [selectedIdea, setSelectedIdea] = useState<RankedIdea | null>(null);
   const { toast } = useToast();
 
   const generateMutation = useMutation({
@@ -65,10 +75,49 @@ export function NovelResearchTab() {
     },
   });
 
+  const chatMutation = useMutation({
+    mutationFn: async (message: string) => {
+      const res = await apiRequest("POST", "/api/chat", {
+        message,
+        context: selectedIdea
+          ? JSON.stringify(selectedIdea)
+          : JSON.stringify(generateMutation.data),
+        type: "novel-ideas"
+      });
+      const data = await res.json();
+
+      if (isErrorResponse(data)) {
+        throw new Error(data.error);
+      }
+
+      return data.response as string;
+    },
+    onSuccess: (response, message) => {
+      setMessages(prev => [
+        ...prev,
+        { role: "user", content: message },
+        { role: "assistant", content: response }
+      ]);
+    },
+    onError: (error) => {
+      toast({
+        title: "Chat Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
   const handleGenerate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!topic.trim()) return;
     generateMutation.mutate(topic);
+    setMessages([]);
+    setSelectedIdea(null);
+  };
+
+  const handleSendMessage = async (message: string) => {
+    await chatMutation.mutate(message);
   };
 
   const renderScore = (score: number, label: string) => (
@@ -103,67 +152,72 @@ export function NovelResearchTab() {
       )}
 
       {generateMutation.data && (
-        <div className="space-y-6">
-          {generateMutation.data.map((rankedIdea, index) => (
-            <Card key={index}>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>{rankedIdea.idea.title}</span>
-                  <span className="text-lg font-semibold">
-                    Score: {rankedIdea.evaluation.overall_score.toFixed(1)}/10
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <h3 className="font-semibold">Problem Statement</h3>
-                    <p>{rankedIdea.idea.problem_statement}</p>
-                    <h3 className="font-semibold">Motivation</h3>
-                    <p>{rankedIdea.idea.motivation}</p>
-                  </div>
-                  <div className="space-y-4">
-                    <h3 className="font-semibold">Evaluation Scores</h3>
-                    {renderScore(rankedIdea.evaluation.novelty.score, "Novelty")}
-                    {renderScore(rankedIdea.evaluation.feasibility.score, "Feasibility")}
-                    {renderScore(rankedIdea.evaluation.potential_impact.score, "Impact")}
-                    <div className="mt-4">
-                      <h4 className="font-semibold">Justifications</h4>
-                      <Table>
-                        <TableBody>
-                          <TableRow>
-                            <TableCell className="font-medium">Novelty</TableCell>
-                            <TableCell>{rankedIdea.evaluation.novelty.justification}</TableCell>
-                          </TableRow>
-                          <TableRow>
-                            <TableCell className="font-medium">Feasibility</TableCell>
-                            <TableCell>{rankedIdea.evaluation.feasibility.justification}</TableCell>
-                          </TableRow>
-                          <TableRow>
-                            <TableCell className="font-medium">Impact</TableCell>
-                            <TableCell>{rankedIdea.evaluation.potential_impact.justification}</TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
+        <SplitPane
+          left={
+            <div className="space-y-6 pr-4">
+              {generateMutation.data.map((rankedIdea, index) => (
+                <Card
+                  key={index}
+                  className={cn(
+                    "cursor-pointer transition-colors",
+                    selectedIdea === rankedIdea ? "border-primary" : "hover:border-primary/50"
+                  )}
+                  onClick={() => setSelectedIdea(rankedIdea)}
+                >
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <span>{rankedIdea.idea.title}</span>
+                      <span className="text-lg font-semibold">
+                        Score: {rankedIdea.evaluation.overall_score.toFixed(1)}/10
+                      </span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <h3 className="font-semibold">Problem Statement</h3>
+                        <p>{rankedIdea.idea.problem_statement}</p>
+                        <h3 className="font-semibold">Motivation</h3>
+                        <p>{rankedIdea.idea.motivation}</p>
+                      </div>
+                      <div className="space-y-4">
+                        <h3 className="font-semibold">Evaluation Scores</h3>
+                        {renderScore(rankedIdea.evaluation.novelty.score, "Novelty")}
+                        {renderScore(rankedIdea.evaluation.feasibility.score, "Feasibility")}
+                        {renderScore(rankedIdea.evaluation.potential_impact.score, "Impact")}
+                      </div>
                     </div>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <h3 className="font-semibold">Existing Methods & Limitations</h3>
-                  <p>{rankedIdea.idea.existing_methods}</p>
-                  <h3 className="font-semibold">Proposed Method</h3>
-                  <p>{rankedIdea.idea.proposed_method}</p>
-                  <h3 className="font-semibold">Related Papers</h3>
-                  <ul className="list-disc list-inside space-y-1">
-                    {rankedIdea.evaluation.related_papers.map((paper, i) => (
-                      <li key={i} className="text-sm text-muted-foreground">{paper}</li>
-                    ))}
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                    <div className="space-y-4">
+                      <h3 className="font-semibold">Existing Methods & Limitations</h3>
+                      <p>{rankedIdea.idea.existing_methods}</p>
+                      <h3 className="font-semibold">Proposed Method</h3>
+                      <p>{rankedIdea.idea.proposed_method}</p>
+                      <h3 className="font-semibold">Related Papers</h3>
+                      <ul className="list-disc list-inside space-y-1">
+                        {rankedIdea.evaluation.related_papers.map((paper, i) => (
+                          <li key={i} className="text-sm text-muted-foreground">{paper}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          }
+          right={
+            <ChatInterface
+              title={selectedIdea ? `Discuss: ${selectedIdea.idea.title}` : "Discuss Generated Ideas"}
+              context={
+                selectedIdea
+                  ? "Ask questions about this research idea and its implications."
+                  : "Ask questions about any of the generated research ideas."
+              }
+              messages={messages}
+              onSendMessage={handleSendMessage}
+              isLoading={chatMutation.isPending}
+            />
+          }
+        />
       )}
     </div>
   );
