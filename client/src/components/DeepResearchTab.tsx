@@ -71,6 +71,19 @@ export function DeepResearchTab() {
     document.body.removeChild(a);
   };
 
+  // Helper function to extract section content
+  const extractSection = (text: string, sectionName: string, endSection?: string) => {
+    const sections = text.split(/\n(?=\w+:|\w+ Metrics:|\w+ Requirements:)/);
+    const section = sections.find(s => s.trim().startsWith(sectionName));
+    if (!section) return "";
+
+    if (endSection) {
+      const parts = section.split(endSection);
+      return parts[0].trim();
+    }
+    return section.trim();
+  };
+
   return (
     <div className="space-y-8">
       <form onSubmit={handleSearch} className="flex gap-2">
@@ -166,7 +179,7 @@ export function DeepResearchTab() {
             <CardContent>
               <div className="prose max-w-none">
                 <div className="whitespace-pre-wrap">
-                  {researchMutation.data.fullText.split("Cross-Study Analysis")[1]?.split("References")[0] || ""}
+                  {extractSection(researchMutation.data.fullText, "Cross-Study Analysis", "Success Metrics")}
                 </div>
               </div>
             </CardContent>
@@ -180,7 +193,7 @@ export function DeepResearchTab() {
             <CardContent>
               <div className="prose max-w-none">
                 <div className="whitespace-pre-wrap">
-                  {researchMutation.data.fullText.split("Success Metrics:")[1]?.split("References")[0] || ""}
+                  {`Success Metrics:\n${extractSection(researchMutation.data.fullText, "Success Metrics", "Limitations")}\n\nImplementation Requirements:\n${extractSection(researchMutation.data.fullText, "Implementation Requirements", "References")}`}
                 </div>
               </div>
             </CardContent>
@@ -193,8 +206,15 @@ export function DeepResearchTab() {
             </CardHeader>
             <CardContent>
               <div className="prose max-w-none">
-                <div className="whitespace-pre-wrap">
-                  {researchMutation.data.fullText.split("References")[1] || ""}
+                <div className="space-y-2">
+                  {researchMutation.data.fullText
+                    .split("References")[1]
+                    ?.trim()
+                    .split("\n")
+                    .filter(ref => ref.trim())
+                    .map((reference, index) => (
+                      <p key={index} className="text-sm">{reference.trim()}</p>
+                    ))}
                 </div>
               </div>
             </CardContent>
