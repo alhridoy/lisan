@@ -46,38 +46,46 @@ export async function extractTextFromDocument(filePath: string): Promise<string>
     }
 
     try {
-      // Import pdf-parse and initialize with our buffer
-      const pdfParse = await import('pdf-parse');
-      console.log('PDF parser imported successfully');
+      // Create a PDF processor instance
+      const createProcessor = (await import('pdf-parse')).default;
 
-      // Process the PDF
-      const data = await pdfParse.default(fileBuffer, {
-        // These options help with text extraction reliability
+      // Process the PDF data directly from the buffer
+      const options = {
+        // Disable internal file loading
+        disableFilesystem: true,
+        // Custom rendering for better text extraction
         pagerender: function(pageData: any) {
-          // Return text content from page
-          return pageData.getTextContent().then(function(textContent: any) {
-            let lastY, text = '';
-            for (let item of textContent.items) {
-              if (lastY != item.transform[5] && text) {
-                text += '\n'; // Add newline between different y-positions
+          const renderOptions = {
+            normalizeWhitespace: true,
+            disableCombineTextItems: false
+          };
+          return pageData.getTextContent(renderOptions)
+            .then(function(textContent: any) {
+              let text = '';
+              let lastY = null;
+              for (const item of textContent.items) {
+                if (lastY !== item.transform[5] && text) {
+                  text += '\n';
+                }
+                text += item.str;
+                lastY = item.transform[5];
               }
-              text += item.str;
-              lastY = item.transform[5];
-            }
-            return text;
-          });
+              return text;
+            });
         }
-      });
+      };
+
+      // Process the buffer directly
+      const data = await createProcessor(Buffer.from(fileBuffer), options);
 
       if (!data || !data.text) {
-        console.error('No text content extracted from PDF');
         throw new Error('No text content could be extracted from the PDF');
       }
 
-      // Clean up and normalize text
+      // Clean and normalize the extracted text
       const cleanedText = data.text
-        .replace(/\s+/g, ' ')  // Replace multiple spaces with single space
-        .replace(/[\r\n]+/g, '\n')  // Normalize line endings
+        .replace(/\s+/g, ' ')
+        .replace(/[\r\n]+/g, '\n')
         .trim();
 
       if (cleanedText.length === 0) {
@@ -97,6 +105,7 @@ export async function extractTextFromDocument(filePath: string): Promise<string>
         throw new Error(`Failed to process PDF: ${error.message}`);
       }
     }
+
   } catch (error: any) {
     console.error('Document processing error:', error);
     throw new Error(`Failed to process document: ${error.message}`);
