@@ -1,5 +1,6 @@
 import * as fs from "fs/promises";
 import * as path from "path";
+import { PDFDocument } from "pdf-lib";
 
 // Add type declaration for multer
 declare module "express" {
@@ -45,35 +46,50 @@ export async function extractTextFromDocument(filePath: string): Promise<string>
       throw new Error('Failed to read file');
     }
 
-    // Process PDF
+    // Process PDF using pdf-lib
     try {
-      // Import pdf-parse dynamically to avoid initialization issues
-      const PDFParser = (await import('pdf-parse')).default;
+      // Load the PDF document
+      const pdfDoc = await PDFDocument.load(fileBuffer);
+      console.log('PDF document loaded successfully');
 
-      console.log('PDF parser initialized, processing file...');
+      // Get the number of pages
+      const numberOfPages = pdfDoc.getPageCount();
+      console.log('Number of pages:', numberOfPages);
 
-      // Pass the buffer directly to PDFParser
-      const pdfData = await PDFParser(fileBuffer);
+      if (numberOfPages === 0) {
+        throw new Error('The PDF document contains no pages');
+      }
 
-      if (!pdfData || !pdfData.text) {
-        console.error('No text content extracted from PDF');
+      // Extract text content from each page
+      let extractedText = '';
+      for (let i = 0; i < numberOfPages; i++) {
+        const page = pdfDoc.getPage(i);
+        const { width, height } = page.getSize();
+
+        // Get text content
+        const textContent = await page.getText();
+        if (textContent) {
+          extractedText += textContent + '\n\n';
+        }
+      }
+
+      // Clean up and normalize text
+      const normalizedText = extractedText
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      if (!normalizedText) {
         throw new Error('No text content could be extracted from the PDF');
       }
 
-      const extractedText = pdfData.text.trim();
-      console.log('Successfully extracted text, length:', extractedText.length);
-
-      if (extractedText.length === 0) {
-        throw new Error('Extracted text is empty');
-      }
-
-      return extractedText;
+      console.log('Successfully extracted text, length:', normalizedText.length);
+      return normalizedText;
 
     } catch (error: any) {
       console.error('PDF processing error:', error);
-      if (error.message.includes('Invalid PDF structure')) {
+      if (error.message.includes('Invalid PDF')) {
         throw new Error('The PDF file appears to be corrupted or invalid');
-      } else if (error.message.includes('Password')) {
+      } else if (error.message.includes('password')) {
         throw new Error('The PDF file is password protected');
       } else {
         throw new Error(`Failed to process PDF: ${error.message}`);

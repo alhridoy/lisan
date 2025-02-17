@@ -28,7 +28,7 @@ const upload = multer({
   fileFilter: (req, file, cb) => {
     console.log('Received file:', file.originalname, 'with mimetype:', file.mimetype);
 
-    // Check file mimetype
+    // Check file mimetype and extension
     const allowedMimeTypes = [
       'application/pdf',
       'application/x-pdf',
@@ -280,70 +280,6 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  app.get("/api/papers/:id", async (req, res) => {
-    try {
-      const paper = await storage.getPaper(parseInt(req.params.id));
-      if (!paper) {
-        return res.status(404).json({ error: "Paper not found" });
-      }
-      res.json(paper);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch paper" });
-    }
-  });
-
-  app.get("/api/recent-searches", async (req, res) => {
-    try {
-      const searches = await storage.getRecentSearches();
-      res.json(searches);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch recent searches" });
-    }
-  });
-
-  app.post("/api/novel-ideas", async (req, res) => {
-    try {
-      const { topic } = req.body;
-      if (!topic || typeof topic !== "string") {
-        return res.status(400).json({ error: "Invalid topic" });
-      }
-
-      console.log("Generating novel ideas for topic:", topic);
-      const ideas = await generateNovelIdeas(topic);
-      res.json(ideas);
-    } catch (error: any) {
-      console.error("Novel ideas generation error:", error);
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.post("/api/chat", async (req, res) => {
-    try {
-      const { message, context, type } = req.body;
-
-      if (!message || typeof message !== "string") {
-        return res.status(400).json({ error: "Invalid message" });
-      }
-
-      if (!context || typeof context !== "string") {
-        return res.status(400).json({ error: "Invalid context" });
-      }
-
-      if (!type || !["deep-research", "novel-ideas"].includes(type)) {
-        return res.status(400).json({ error: "Invalid type" });
-      }
-
-      console.log("Processing chat request:", { type, messageLength: message.length });
-
-      const response = await generateChatResponse(message, context, type as "deep-research" | "novel-ideas");
-
-      res.json({ response });
-    } catch (error: any) {
-      console.error("Chat error:", error);
-      res.status(500).json({ error: error.message });
-    }
-  });
-
   app.post("/api/peer-review", upload.single("file"), async (req, res) => {
     let filePath: string | undefined;
 
@@ -370,51 +306,52 @@ export async function registerRoutes(app: Express) {
       }
 
       // Use OpenAI to analyze the paper
-      const prompt = `You are an expert academic peer reviewer. Review this academic paper and provide detailed feedback.
-    Consider methodology, literature review, clarity, and scientific rigor.
-
-    Paper text:
-    ${text}
-
-    Provide a JSON response with:
-    {
-      "generalFeedback": "Overall assessment of the paper",
-      "methodologyAnalysis": {
-        "strengths": ["list of methodological strengths"],
-        "gaps": ["identified gaps or weaknesses"],
-        "recommendations": ["specific suggestions for improvement"]
-      },
-      "literatureReview": {
-        "relevantPapers": [
-          {
-            "title": "paper title",
-            "authors": ["author names"],
-            "year": year,
-            "relevance": "explanation of relevance"
-          }
-        ],
-        "suggestedRemovals": [
-          {
-            "citation": "citation text",
-            "reason": "reason for suggesting removal"
-          }
-        ]
-      },
-      "writingStyle": {
-        "clarity": "assessment of writing clarity",
-        "improvements": ["suggested writing improvements"]
-      }
-    }`;
-
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" },
-        max_tokens: 2000
+        model: "gpt-4o", // Using the latest model
+        messages: [{
+          role: "user",
+          content: `You are an expert academic peer reviewer. Review this academic paper and provide detailed feedback.
+            Consider methodology, literature review, clarity, and scientific rigor.
+
+            Paper text:
+            ${text}
+
+            Provide your review in JSON format with:
+            {
+              "generalFeedback": "Overall assessment of the paper",
+              "methodologyAnalysis": {
+                "strengths": ["list of methodological strengths"],
+                "gaps": ["identified gaps or weaknesses"],
+                "recommendations": ["specific suggestions for improvement"]
+              },
+              "literatureReview": {
+                "relevantPapers": [
+                  {
+                    "title": "paper title",
+                    "authors": ["author names"],
+                    "year": year,
+                    "relevance": "explanation of relevance"
+                  }
+                ],
+                "suggestedRemovals": [
+                  {
+                    "citation": "citation text",
+                    "reason": "reason for suggesting removal"
+                  }
+                ]
+              },
+              "writingStyle": {
+                "clarity": "assessment of writing clarity",
+                "improvements": ["suggested writing improvements"]
+              }
+            }`
+        }],
+        response_format: { type: "json_object" }
       });
 
       const result = JSON.parse(response.choices[0].message.content);
       res.json(result);
+
     } catch (error: any) {
       console.error("Peer review error:", error);
       res.status(500).json({ error: error.message });
