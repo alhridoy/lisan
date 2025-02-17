@@ -46,60 +46,54 @@ export async function extractTextFromDocument(filePath: string): Promise<string>
     }
 
     try {
-      // Create a PDF processor instance
-      const createProcessor = (await import('pdf-parse')).default;
+      // Import pdf-parse without accessing its filesystem
+      const pdfParse = (await import('pdf-parse')).default;
 
-      // Process the PDF data directly from the buffer
+      // Create a buffer copy to ensure we're not using the same reference
+      const pdfBuffer = Buffer.from(fileBuffer);
+
+      // Process PDF with custom options to avoid filesystem access
       const options = {
-        // Disable internal file loading
-        disableFilesystem: true,
-        // Custom rendering for better text extraction
+        // Prevent pdf-parse from loading any external files
+        disableGlobalTest: true,
+        disableLocalTest: true,
+        // Custom page rendering to extract text properly
         pagerender: function(pageData: any) {
-          const renderOptions = {
-            normalizeWhitespace: true,
-            disableCombineTextItems: false
-          };
-          return pageData.getTextContent(renderOptions)
-            .then(function(textContent: any) {
-              let text = '';
-              let lastY = null;
-              for (const item of textContent.items) {
-                if (lastY !== item.transform[5] && text) {
-                  text += '\n';
-                }
-                text += item.str;
-                lastY = item.transform[5];
+          return pageData.getTextContent().then(function(textContent: any) {
+            let lastY, text = '';
+            for (const item of textContent.items) {
+              if (lastY != item.transform[5] && text) {
+                text += '\n';
               }
-              return text;
-            });
+              text += item.str;
+              lastY = item.transform[5];
+            }
+            return text;
+          });
         }
       };
 
-      // Process the buffer directly
-      const data = await createProcessor(Buffer.from(fileBuffer), options);
+      console.log('Processing PDF with buffer size:', pdfBuffer.length);
+      const data = await pdfParse(pdfBuffer, options);
 
       if (!data || !data.text) {
         throw new Error('No text content could be extracted from the PDF');
       }
 
-      // Clean and normalize the extracted text
+      // Clean up the text
       const cleanedText = data.text
         .replace(/\s+/g, ' ')
         .replace(/[\r\n]+/g, '\n')
         .trim();
-
-      if (cleanedText.length === 0) {
-        throw new Error('Extracted text is empty after cleaning');
-      }
 
       console.log('Successfully extracted text, length:', cleanedText.length);
       return cleanedText;
 
     } catch (error: any) {
       console.error('PDF processing error:', error);
-      if (error.message.includes('Invalid PDF')) {
+      if (error.message.includes('Invalid PDF structure')) {
         throw new Error('The PDF file appears to be corrupted or invalid');
-      } else if (error.message.includes('password')) {
+      } else if (error.message.includes('Password')) {
         throw new Error('The PDF file is password protected');
       } else {
         throw new Error(`Failed to process PDF: ${error.message}`);
@@ -109,16 +103,9 @@ export async function extractTextFromDocument(filePath: string): Promise<string>
   } catch (error: any) {
     console.error('Document processing error:', error);
     throw new Error(`Failed to process document: ${error.message}`);
+
   } finally {
     // Clean up resources
     fileBuffer = null;
-
-    // Clean up the temporary file
-    try {
-      await fs.unlink(filePath);
-      console.log('Temporary file cleaned up:', path.basename(filePath));
-    } catch (error) {
-      console.error('Error cleaning up temporary file:', error);
-    }
   }
 }

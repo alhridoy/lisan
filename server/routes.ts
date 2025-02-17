@@ -297,6 +297,15 @@ export async function registerRoutes(app: Express) {
         path: req.file.path
       });
 
+      // Verify file exists before processing
+      try {
+        await fs.promises.access(filePath, fs.constants.R_OK);
+        console.log("File exists and is readable:", filePath);
+      } catch (error) {
+        console.error("File access error:", error);
+        throw new Error("Uploaded file not accessible");
+      }
+
       // Extract text from the uploaded document
       const text = await extractTextFromDocument(filePath);
       console.log("Text extraction successful, length:", text.length);
@@ -356,10 +365,11 @@ export async function registerRoutes(app: Express) {
       console.error("Peer review error:", error);
       res.status(500).json({ error: error.message });
     } finally {
-      // Clean up uploaded file if it still exists
+      // Clean up uploaded file
       if (filePath) {
         try {
           await fs.promises.unlink(filePath);
+          console.log("Temporary file cleaned up:", filePath);
         } catch (error) {
           console.error("Error deleting uploaded file:", error);
         }
