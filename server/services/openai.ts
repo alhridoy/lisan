@@ -262,3 +262,98 @@ interface PaperSummaryStructure {
   methodology: string;
   outcomes: string;
 }
+
+// Add these functions after the existing ones
+
+export async function generateNovelIdeas(topic: string): Promise<Array<{
+  idea: ExpandedIdea;
+  evaluation: IdeaEvaluation;
+}>> {
+  try {
+    console.log("Generating novel research ideas for topic:", topic);
+
+    const prompt = `Generate novel research ideas for the topic: "${topic}"
+
+Use the following process to generate ideas:
+1. Analyze the research landscape
+2. Identify gaps and opportunities
+3. Generate innovative solutions
+4. Consider interdisciplinary connections
+
+For each idea, provide a detailed analysis in this JSON format:
+{
+  "ideas": [
+    {
+      "idea": {
+        "title": "Title of the research idea",
+        "problem_statement": "Clear statement of the problem and its significance",
+        "existing_methods": "Analysis of current approaches and their limitations",
+        "motivation": "Why this idea is important and novel",
+        "proposed_method": "Detailed description of the proposed approach"
+      },
+      "evaluation": {
+        "novelty": {
+          "score": number (1-10),
+          "justification": "Detailed explanation of novelty score"
+        },
+        "feasibility": {
+          "score": number (1-10),
+          "justification": "Detailed explanation of feasibility score"
+        },
+        "potential_impact": {
+          "score": number (1-10),
+          "justification": "Detailed explanation of impact score"
+        },
+        "overall_score": number (1-10)
+      }
+    }
+  ]
+}`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: "You are an expert AI research assistant specialized in generating novel research ideas."
+        },
+        { role: "user", content: prompt }
+      ],
+      response_format: { type: "json_object" },
+      max_tokens: 3000
+    });
+
+    const content = response.choices[0].message.content || "{}";
+    console.log("Received novel ideas from OpenAI");
+
+    const result = JSON.parse(content);
+    return result.ideas || [];
+  } catch (error: any) {
+    console.error("OpenAI novel ideas generation error:", error);
+    throw new Error(`Failed to generate novel ideas: ${error.message}`);
+  }
+}
+
+interface ExpandedIdea {
+  title: string;
+  problem_statement: string;
+  existing_methods: string;
+  motivation: string;
+  proposed_method: string;
+}
+
+interface IdeaEvaluation {
+  novelty: {
+    score: number;
+    justification: string;
+  };
+  feasibility: {
+    score: number;
+    justification: string;
+  };
+  potential_impact: {
+    score: number;
+    justification: string;
+  };
+  overall_score: number;
+}

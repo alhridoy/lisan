@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
-import { analyzeQuery, generatePaperSummary, calculateRelevanceScore, generateStructuredSummaries, generateDeepResearch } from "./services/openai";
+import { analyzeQuery, generatePaperSummary, calculateRelevanceScore, generateStructuredSummaries, generateDeepResearch, generateNovelIdeas } from "./services/openai";
 import { searchArxiv } from "./services/arxiv";
 import { searchSemanticScholar } from "./services/semantic-scholar";
 import { insertPaperSchema } from "@shared/schema";
@@ -303,6 +303,22 @@ export async function registerRoutes(app: Express) {
       res.json(searches);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch recent searches" });
+    }
+  });
+
+  app.post("/api/novel-ideas", async (req, res) => {
+    try {
+      const { topic } = req.body;
+      if (!topic || typeof topic !== "string") {
+        return res.status(400).json({ error: "Invalid topic" });
+      }
+
+      console.log("Generating novel ideas for topic:", topic);
+      const ideas = await generateNovelIdeas(topic);
+      res.json(ideas);
+    } catch (error: any) {
+      console.error("Novel ideas generation error:", error);
+      res.status(500).json({ error: error.message });
     }
   });
 
