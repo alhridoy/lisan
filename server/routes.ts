@@ -345,15 +345,29 @@ export async function registerRoutes(app: Express) {
   });
 
   app.post("/api/peer-review", upload.single("file"), async (req, res) => {
+    let filePath: string | undefined;
+
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No file uploaded" });
       }
 
+      filePath = req.file.path;
       console.log("Processing uploaded file for peer review:", req.file.originalname);
+      console.log("File details:", {
+        filename: req.file.filename,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+        path: req.file.path
+      });
 
       // Extract text from the uploaded document
-      const text = await extractTextFromDocument(req.file.path);
+      const text = await extractTextFromDocument(filePath);
+      console.log("Text extraction successful, length:", text.length);
+
+      if (!text || text.trim().length === 0) {
+        throw new Error("No text could be extracted from the document");
+      }
 
       // Use OpenAI to analyze the paper
       const prompt = `You are an expert academic peer reviewer. Review this academic paper and provide detailed feedback.
@@ -405,14 +419,78 @@ export async function registerRoutes(app: Express) {
       console.error("Peer review error:", error);
       res.status(500).json({ error: error.message });
     } finally {
-      // Clean up uploaded file
-      if (req.file?.path) {
+      // Clean up uploaded file if it still exists
+      if (filePath) {
         try {
-          await fs.promises.unlink(req.file.path);
+          await fs.promises.unlink(filePath);
         } catch (error) {
           console.error("Error deleting uploaded file:", error);
         }
       }
+    }
+  });
+
+  app.get("/api/papers/:id", async (req, res) => {
+    try {
+      const paper = await storage.getPaper(parseInt(req.params.id));
+      if (!paper) {
+        return res.status(404).json({ error: "Paper not found" });
+      }
+      res.json(paper);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch paper" });
+    }
+  });
+
+  app.get("/api/recent-searches", async (req, res) => {
+    try {
+      const searches = await storage.getRecentSearches();
+      res.json(searches);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch recent searches" });
+    }
+  });
+
+  app.post("/api/novel-ideas", async (req, res) => {
+    try {
+      const { topic } = req.body;
+      if (!topic || typeof topic !== "string") {
+        return res.status(400).json({ error: "Invalid topic" });
+      }
+
+      console.log("Generating novel ideas for topic:", topic);
+      const ideas = await generateNovelIdeas(topic);
+      res.json(ideas);
+    } catch (error: any) {
+      console.error("Novel ideas generation error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/chat", async (req, res) => {
+    try {
+      const { message, context, type } = req.body;
+
+      if (!message || typeof message !== "string") {
+        return res.status(400).json({ error: "Invalid message" });
+      }
+
+      if (!context || typeof context !== "string") {
+        return res.status(400).json({ error: "Invalid context" });
+      }
+
+      if (!type || !["deep-research", "novel-ideas"].includes(type)) {
+        return res.status(400).json({ error: "Invalid type" });
+      }
+
+      console.log("Processing chat request:", { type, messageLength: message.length });
+
+      const response = await generateChatResponse(message, context, type as "deep-research" | "novel-ideas");
+
+      res.json({ response });
+    } catch (error: any) {
+      console.error("Chat error:", error);
+      res.status(500).json({ error: error.message });
     }
   });
 

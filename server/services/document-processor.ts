@@ -1,6 +1,5 @@
 import * as fs from "fs/promises";
 import * as path from "path";
-import mammoth from "mammoth";
 
 // Add type declaration for multer
 declare module "express" {
@@ -24,44 +23,88 @@ declare module "express" {
 }
 
 export async function extractTextFromDocument(filePath: string): Promise<string> {
+  let fileBuffer: Buffer | null = null;
+
   try {
-    // Check if file exists
+    console.log('Starting document processing for:', path.basename(filePath));
+
+    // Verify file exists and is readable
     try {
-      await fs.access(filePath);
+      await fs.access(filePath, fs.constants.R_OK);
     } catch (error) {
-      throw new Error('File not found or inaccessible');
+      console.error('File access error:', error);
+      throw new Error('File not found or not readable');
     }
 
-    // Read the file buffer
-    const fileBuffer = await fs.readFile(filePath);
-    console.log('Read file buffer, size:', fileBuffer.length);
-
+    // Read file into buffer
     try {
-      // Dynamically import pdf-parse
-      const PDFParser = (await import('pdf-parse')).default;
-      console.log('PDF parser imported successfully');
+      fileBuffer = await fs.readFile(filePath);
+      console.log('Successfully read file, size:', fileBuffer.length, 'bytes');
+    } catch (error) {
+      console.error('File read error:', error);
+      throw new Error('Failed to read file');
+    }
 
-      const pdfData = await PDFParser(fileBuffer);
-      console.log('PDF parsing completed, text length:', pdfData.text?.length || 0);
+    // Process PDF
+    try {
+      // Import pdf-parse dynamically to avoid initialization issues
+      const pdfParse = await import('pdf-parse');
+      const PDFParser = pdfParse.default;
 
-      if (!pdfData.text || pdfData.text.trim().length === 0) {
-        throw new Error('No text content found in PDF file');
+      console.log('PDF parser initialized, processing file...');
+
+      // Create a data object with the buffer
+      const dataBuffer = {
+        data: fileBuffer,
+        length: fileBuffer.length
+      };
+
+      const options = {
+        max: 0,  // No page limit
+        pagerender: function(pageData: any) {
+          return pageData.getTextContent();
+        }
+      };
+
+      const pdfData = await PDFParser(dataBuffer, options);
+
+      if (!pdfData || !pdfData.text) {
+        console.error('No text content extracted from PDF');
+        throw new Error('No text content could be extracted from the PDF');
       }
 
-      return pdfData.text;
+      const extractedText = pdfData.text.trim();
+      console.log('Successfully extracted text, length:', extractedText.length);
+
+      if (extractedText.length === 0) {
+        throw new Error('Extracted text is empty');
+      }
+
+      return extractedText;
+
     } catch (error: any) {
       console.error('PDF processing error:', error);
-      throw new Error('Failed to process PDF file. Please ensure the file is not corrupted or password protected.');
+      if (error.message.includes('Invalid PDF structure')) {
+        throw new Error('The PDF file appears to be corrupted or invalid');
+      } else if (error.message.includes('Password')) {
+        throw new Error('The PDF file is password protected');
+      } else {
+        throw new Error(`Failed to process PDF: ${error.message}`);
+      }
     }
   } catch (error: any) {
     console.error('Document processing error:', error);
     throw new Error(`Failed to process document: ${error.message}`);
   } finally {
+    // Clean up resources
+    fileBuffer = null;
+
     // Clean up the temporary file
     try {
       await fs.unlink(filePath);
+      console.log('Temporary file cleaned up:', path.basename(filePath));
     } catch (error) {
-      console.error('Error deleting temporary file:', error);
+      console.error('Error cleaning up temporary file:', error);
     }
   }
 }
