@@ -83,10 +83,9 @@ export function NovelResearchTab() {
           context: selectedIdea
             ? JSON.stringify(selectedIdea)
             : JSON.stringify(generateMutation.data),
-          type: "novel-ideas"
+          type: "web-search" 
         });
 
-        // Check if response is not JSON
         const contentType = res.headers.get("content-type");
         if (!contentType || !contentType.includes("application/json")) {
           throw new Error("Invalid response from server");
@@ -221,8 +220,8 @@ export function NovelResearchTab() {
               title={selectedIdea ? `Discuss: ${selectedIdea.idea.title}` : "Discuss Generated Ideas"}
               context={
                 selectedIdea
-                  ? "Ask questions about this research idea and its implications."
-                  : "Ask questions about any of the generated research ideas."
+                  ? "Ask questions about this research idea and its implications, or search the web for related information."
+                  : "Ask questions about any of the generated research ideas, or search the web to learn more."
               }
               messages={messages}
               onSendMessage={handleSendMessage}

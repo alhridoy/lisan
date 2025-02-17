@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
-import { MessageCircle, Send, Sparkles } from "lucide-react";
+import { MessageCircle, Send, Sparkles, Search, Globe } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 interface Message {
   role: "user" | "assistant";
@@ -14,7 +15,7 @@ interface Message {
 interface ChatInterfaceProps {
   title?: string;
   context: string;
-  onSendMessage: (message: string) => Promise<void>;
+  onSendMessage: (message: string, type?: "chat" | "web-search") => Promise<void>;
   messages: Message[];
   isLoading?: boolean;
   className?: string;
@@ -29,6 +30,7 @@ export function ChatInterface({
   className,
 }: ChatInterfaceProps) {
   const [input, setInput] = React.useState("");
+  const [isWebSearch, setIsWebSearch] = React.useState(false);
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -43,22 +45,35 @@ export function ChatInterface({
 
     const message = input;
     setInput("");
-    await onSendMessage(message);
+    await onSendMessage(message, isWebSearch ? "web-search" : "chat");
   };
 
   return (
     <Card className={cn("flex flex-col h-[600px]", className)}>
-      <div className="px-4 py-2 border-b bg-muted/50">
+      <div className="px-4 py-2 border-b bg-muted/50 flex justify-between items-center">
         <h3 className="text-sm font-semibold flex items-center gap-2">
-          <MessageCircle className="w-4 h-4" />
+          {isWebSearch ? <Globe className="w-4 h-4" /> : <MessageCircle className="w-4 h-4" />}
           {title}
         </h3>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Web Search</span>
+          <Switch
+            checked={isWebSearch}
+            onCheckedChange={setIsWebSearch}
+            aria-label="Toggle web search"
+          />
+        </div>
       </div>
       <ScrollArea ref={scrollRef} className="flex-1 p-4">
         <div className="space-y-4">
           {context && (
             <div className="bg-muted/50 rounded-lg p-3 text-sm">
-              <p className="text-muted-foreground">{context}</p>
+              <p className="text-muted-foreground">
+                {isWebSearch 
+                  ? "Ask anything and I'll search the web for comprehensive answers." 
+                  : context
+                }
+              </p>
             </div>
           )}
           {messages.map((message, index) => (
@@ -76,7 +91,11 @@ export function ChatInterface({
                 )}
               >
                 {message.role === "assistant" ? (
-                  <Sparkles className="w-4 h-4 text-primary" />
+                  isWebSearch ? (
+                    <Globe className="w-4 h-4 text-primary" />
+                  ) : (
+                    <Sparkles className="w-4 h-4 text-primary" />
+                  )
                 ) : (
                   <MessageCircle className="w-4 h-4" />
                 )}
@@ -96,7 +115,11 @@ export function ChatInterface({
           {isLoading && (
             <div className="flex gap-2 items-start">
               <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <Sparkles className="w-4 h-4 text-primary animate-pulse" />
+                {isWebSearch ? (
+                  <Globe className="w-4 h-4 text-primary animate-pulse" />
+                ) : (
+                  <Sparkles className="w-4 h-4 text-primary animate-pulse" />
+                )}
               </div>
               <div className="bg-muted/50 rounded-lg px-3 py-2">
                 <div className="flex gap-1">
@@ -111,13 +134,17 @@ export function ChatInterface({
       </ScrollArea>
       <form onSubmit={handleSubmit} className="p-4 border-t flex gap-2">
         <Input
-          placeholder="Type a message..."
+          placeholder={isWebSearch ? "Search the web..." : "Type a message..."}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           disabled={isLoading}
         />
         <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
-          <Send className="w-4 h-4" />
+          {isWebSearch ? (
+            <Search className="w-4 h-4" />
+          ) : (
+            <Send className="w-4 h-4" />
+          )}
         </Button>
       </form>
     </Card>
