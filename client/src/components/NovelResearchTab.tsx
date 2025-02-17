@@ -47,6 +47,9 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   citations?: string[];
+  searchStatus?: {
+    queries: string[];
+  };
 }
 
 export function NovelResearchTab() {
@@ -77,9 +80,25 @@ export function NovelResearchTab() {
   });
 
   const chatMutation = useMutation({
-    mutationFn: async (message: string) => {
+    mutationFn: async (message: string, type?: "chat" | "web-search") => {
       try {
         console.log("Sending chat message:", message);
+
+        // First, add the search queries immediately
+        if (type === "web-search") {
+          setMessages(prev => [
+            ...prev,
+            { 
+              role: "assistant",
+              content: "",
+              searchStatus: {
+                queries: [
+                  "Generating search queries...",
+                ]
+              }
+            }
+          ]);
+        }
 
         const res = await apiRequest("POST", "/api/chat", {
           message,
@@ -105,7 +124,8 @@ export function NovelResearchTab() {
 
         return {
           response: data.response,
-          citations: data.citations
+          citations: data.citations,
+          searchStatus: data.searchStatus
         };
       } catch (error: any) {
         console.error("Chat error:", error);
@@ -115,12 +135,13 @@ export function NovelResearchTab() {
     onSuccess: (data, message) => {
       console.log("Adding messages to chat:", { message, response: data });
       setMessages(prev => [
-        ...prev,
+        ...prev.filter(m => !m.searchStatus?.queries?.includes("Generating search queries...")), // Remove loading message
         { role: "user", content: message },
         { 
           role: "assistant", 
           content: data.response,
-          citations: data.citations
+          citations: data.citations,
+          searchStatus: data.searchStatus
         }
       ]);
     },
@@ -143,7 +164,7 @@ export function NovelResearchTab() {
 
   const handleSendMessage = async (message: string, type?: "chat" | "web-search") => {
     console.log("Handling message:", { message, type });
-    await chatMutation.mutate(message);
+    await chatMutation.mutate(message, type);
   };
 
   const renderScore = (score: number, label: string) => (

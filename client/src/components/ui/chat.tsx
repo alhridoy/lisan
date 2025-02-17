@@ -4,13 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
-import { MessageCircle, Send, Sparkles, Search, Globe, Link } from "lucide-react";
+import { MessageCircle, Send, Sparkles, Search, Globe, Link, CheckCircle2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
   citations?: string[];
+  searchStatus?: {
+    queries?: string[];
+    searched?: boolean;
+    sourcesFound?: number;
+  };
 }
 
 interface ChatInterfaceProps {
@@ -108,6 +113,29 @@ export function ChatInterface({
                     : "bg-primary text-primary-foreground"
                 )}
               >
+                {message.searchStatus?.queries && (
+                  <div className="space-y-2 mb-4">
+                    <p className="text-sm text-muted-foreground">To provide the best answer, I will research different possible meanings:</p>
+                    {message.searchStatus.queries.map((query, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <Search className="w-4 h-4 text-muted-foreground" />
+                        <p className="text-sm">{query}</p>
+                      </div>
+                    ))}
+                    {message.searchStatus.searched && (
+                      <div className="flex items-center gap-2 text-primary">
+                        <CheckCircle2 className="w-4 h-4" />
+                        <p className="text-sm">Searched the web</p>
+                      </div>
+                    )}
+                    {message.searchStatus.sourcesFound !== undefined && (
+                      <div className="flex items-center gap-2">
+                        <Globe className="w-4 h-4 text-muted-foreground" />
+                        <p className="text-sm">Found {message.searchStatus.sourcesFound} web sources</p>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div>{message.content}</div>
                 {message.role === "assistant" && message.citations && message.citations.length > 0 && (
                   <div className="border-t pt-2 mt-2 space-y-1">
