@@ -149,6 +149,70 @@ Paper Metadata: ${JSON.stringify(paper.metadata)}`;
   }
 }
 
+export async function generateDeepResearch(
+  papers: { title: string; abstract: string }[],
+  query: string
+): Promise<{
+  abstractAndMethod: string;
+  studies: Array<{
+    study: string;
+    studyType: string;
+    researchFocus: string;
+    analysis: string;
+    references: string[];
+  }>;
+}> {
+  try {
+    console.log("Generating deep research analysis for papers:", papers.length);
+
+    if (!papers.length) {
+      return {
+        abstractAndMethod: "No papers found for analysis.",
+        studies: []
+      };
+    }
+
+    const prompt = `Analyze these academic papers related to "${query}" and provide a detailed research analysis.
+
+Papers to analyze:
+${papers.map(p => `Title: ${p.title}\nAbstract: ${p.abstract}\n---`).join('\n')}
+
+Return a JSON object with:
+{
+  "abstractAndMethod": "A comprehensive overview of the research area and methodologies used across studies",
+  "studies": [
+    {
+      "study": "Name or brief identifier of the study",
+      "studyType": "Type of research (e.g., Empirical, Theoretical, Case Study)",
+      "researchFocus": "Main research questions or objectives",
+      "analysis": "Key findings and implications",
+      "references": ["List of relevant citations"]
+    }
+  ]
+}`;
+
+    console.log("Sending request to OpenAI for deep research analysis...");
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: prompt }],
+      response_format: { type: "json_object" },
+      max_tokens: 2000
+    });
+
+    const content = response.choices[0].message.content || "{}";
+    console.log("Received deep research analysis from OpenAI");
+
+    const result = JSON.parse(content);
+    return {
+      abstractAndMethod: result.abstractAndMethod || "No abstract available",
+      studies: result.studies || []
+    };
+  } catch (error: any) {
+    console.error("OpenAI deep research analysis error:", error);
+    throw new Error(`Failed to generate deep research analysis: ${error.message}`);
+  }
+}
+
 interface QueryAnalysis {
   filters: {
     yearRange?: { start?: number; end?: number };

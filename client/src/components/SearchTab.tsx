@@ -11,7 +11,7 @@ import { apiRequest } from "@/lib/queryClient";
 import type { SearchResponse } from "@/lib/api-types";
 import type { Paper, SearchHistory } from "@shared/schema";
 
-export default function SearchTab() {
+export function SearchTab() {
   const [query, setQuery] = useState("");
   const { toast } = useToast();
 

@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
-import { analyzeQuery, generatePaperSummary, calculateRelevanceScore, generateStructuredSummaries } from "./services/openai";
+import { analyzeQuery, generatePaperSummary, calculateRelevanceScore, generateStructuredSummaries, generateDeepResearch } from "./services/openai";
 import { searchArxiv } from "./services/arxiv";
 import { searchSemanticScholar } from "./services/semantic-scholar";
 import { insertPaperSchema } from "@shared/schema";
@@ -216,6 +216,72 @@ export async function registerRoutes(app: Express) {
     } catch (error) {
       console.error("Summary generation error:", error);
       res.status(500).json({ error: "Failed to generate summary" });
+    }
+  });
+
+  app.post("/api/deep-research", async (req, res) => {
+    try {
+      const { query } = req.body;
+      console.log("Received deep research request with query:", query);
+
+      if (!query || typeof query !== "string") {
+        return res.status(400).json({ error: "Invalid query" });
+      }
+
+      // First, analyze query and get relevant papers
+      console.log("Analyzing query for deep research...");
+      const analysis = await analyzeQuery(query);
+      console.log("Query analysis result:", analysis);
+
+      const [arxivResults, semanticScholarResults] = await Promise.all([
+        searchArxiv(analysis.enhancedQuery),
+        searchSemanticScholar(analysis.enhancedQuery)
+      ]);
+
+      console.log("Search results:", {
+        arxivCount: arxivResults.length,
+        semanticScholarCount: semanticScholarResults.length
+      });
+
+      // Combine and filter results
+      const allResults = [...arxivResults, ...semanticScholarResults];
+      const filteredResults = [];
+      const seenTitles = new Set();
+
+      for (const paper of allResults) {
+        if (!seenTitles.has(paper.title)) {
+          seenTitles.add(paper.title);
+          filteredResults.push(paper);
+        }
+      }
+
+      console.log("Filtered results count:", filteredResults.length);
+
+      // Get relevance scores
+      const scoredResults = await Promise.all(
+        filteredResults.map(async (paper) => ({
+          ...paper,
+          score: await calculateRelevanceScore(paper, query)
+        }))
+      );
+
+      // Select top papers
+      const topPapers = scoredResults
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5)
+        .map(({ score, ...paper }) => paper);
+
+      console.log("Selected top papers for deep research:", topPapers.length);
+
+      // Generate deep research analysis
+      console.log("Generating deep research analysis...");
+      const researchResult = await generateDeepResearch(topPapers, query);
+      console.log("Generated deep research result");
+
+      res.json(researchResult);
+    } catch (error: any) {
+      console.error("Deep research error:", error);
+      res.status(500).json({ error: error.message });
     }
   });
 

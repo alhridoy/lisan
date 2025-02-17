@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -29,7 +28,7 @@ interface SummaryResponse {
   overview: string;
 }
 
-export default function SummaryTab() {
+export function SummaryTab() {
   const [query, setQuery] = useState("");
   const { toast } = useToast();
 
@@ -81,7 +80,6 @@ export default function SummaryTab() {
           className="flex-1"
         />
         <Button type="submit" disabled={summaryMutation.isPending}>
-          <Search className="mr-2 h-4 w-4" />
           Generate Summary
         </Button>
       </form>
