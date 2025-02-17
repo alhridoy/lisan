@@ -79,6 +79,8 @@ export function NovelResearchTab() {
   const chatMutation = useMutation({
     mutationFn: async (message: string) => {
       try {
+        console.log("Sending chat message:", message);
+
         const res = await apiRequest("POST", "/api/chat", {
           message,
           context: selectedIdea
@@ -87,32 +89,38 @@ export function NovelResearchTab() {
           type: "web-search"
         });
 
+        console.log("Chat response received");
+
         const contentType = res.headers.get("content-type");
         if (!contentType || !contentType.includes("application/json")) {
           throw new Error("Invalid response from server");
         }
 
         const data = await res.json();
+        console.log("Parsed response:", data);
 
         if (isErrorResponse(data)) {
           throw new Error(data.error);
         }
 
-        // Return both response and citations
-        return data;
+        return {
+          response: data.response,
+          citations: data.citations
+        };
       } catch (error: any) {
         console.error("Chat error:", error);
         throw new Error("Failed to send message. Please try again.");
       }
     },
-    onSuccess: (response, message) => {
+    onSuccess: (data, message) => {
+      console.log("Adding messages to chat:", { message, response: data });
       setMessages(prev => [
         ...prev,
         { role: "user", content: message },
-        {
-          role: "assistant",
-          content: response.response,
-          citations: response.citations
+        { 
+          role: "assistant", 
+          content: data.response,
+          citations: data.citations
         }
       ]);
     },
@@ -133,7 +141,8 @@ export function NovelResearchTab() {
     setSelectedIdea(null);
   };
 
-  const handleSendMessage = async (message: string) => {
+  const handleSendMessage = async (message: string, type?: "chat" | "web-search") => {
+    console.log("Handling message:", { message, type });
     await chatMutation.mutate(message);
   };
 

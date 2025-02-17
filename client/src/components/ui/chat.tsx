@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 interface Message {
   role: "user" | "assistant";
   content: string;
-  citations?: string[]; // Add citations for web search responses
+  citations?: string[];
 }
 
 interface ChatInterfaceProps {
