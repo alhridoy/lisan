@@ -106,6 +106,21 @@ export function DeepResearchTab() {
     return reference.trim();
   };
 
+  // Add this helper function for extracting references
+  const extractReferences = (text: string | undefined | null): string[] => {
+    if (!text || typeof text !== 'string') return [];
+
+    const referencesSection = text.split('References')[1];
+    if (!referencesSection) return [];
+
+    return referencesSection
+      .trim()
+      .split('\n')
+      .filter(ref => ref.trim())
+      .map(ref => formatReference(ref));
+  };
+
+
   return (
     <div className="space-y-8">
       <form onSubmit={handleSearch} className="flex gap-2">
@@ -236,16 +251,11 @@ export function DeepResearchTab() {
             <CardContent>
               <div className="prose max-w-none">
                 <div className="space-y-2">
-                  {researchMutation.data.fullText
-                    .split("References")[1]
-                    ?.trim()
-                    .split("\n")
-                    .filter(ref => ref.trim())
-                    .map((reference, index) => (
-                      <p key={index} className="text-sm">
-                        {formatReference(reference)}
-                      </p>
-                    ))}
+                  {extractReferences(researchMutation.data?.fullText).map((reference, index) => (
+                    <p key={index} className="text-sm">
+                      {reference}
+                    </p>
+                  ))}
                 </div>
               </div>
             </CardContent>
