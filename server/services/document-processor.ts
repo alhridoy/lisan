@@ -1,6 +1,5 @@
 import * as fs from "fs/promises";
 import * as path from "path";
-import { PDFDocument } from "pdf-lib";
 
 // Add type declaration for multer
 declare module "express" {
@@ -46,44 +45,47 @@ export async function extractTextFromDocument(filePath: string): Promise<string>
       throw new Error('Failed to read file');
     }
 
-    // Process PDF using pdf-lib
     try {
-      // Load the PDF document
-      const pdfDoc = await PDFDocument.load(fileBuffer);
-      console.log('PDF document loaded successfully');
+      // Import pdf-parse and initialize with our buffer
+      const pdfParse = await import('pdf-parse');
+      console.log('PDF parser imported successfully');
 
-      // Get the number of pages
-      const numberOfPages = pdfDoc.getPageCount();
-      console.log('Number of pages:', numberOfPages);
-
-      if (numberOfPages === 0) {
-        throw new Error('The PDF document contains no pages');
-      }
-
-      // Extract text content from each page
-      let extractedText = '';
-      for (let i = 0; i < numberOfPages; i++) {
-        const page = pdfDoc.getPage(i);
-        const { width, height } = page.getSize();
-
-        // Get text content
-        const textContent = await page.getText();
-        if (textContent) {
-          extractedText += textContent + '\n\n';
+      // Process the PDF
+      const data = await pdfParse.default(fileBuffer, {
+        // These options help with text extraction reliability
+        pagerender: function(pageData: any) {
+          // Return text content from page
+          return pageData.getTextContent().then(function(textContent: any) {
+            let lastY, text = '';
+            for (let item of textContent.items) {
+              if (lastY != item.transform[5] && text) {
+                text += '\n'; // Add newline between different y-positions
+              }
+              text += item.str;
+              lastY = item.transform[5];
+            }
+            return text;
+          });
         }
-      }
+      });
 
-      // Clean up and normalize text
-      const normalizedText = extractedText
-        .replace(/\s+/g, ' ')
-        .trim();
-
-      if (!normalizedText) {
+      if (!data || !data.text) {
+        console.error('No text content extracted from PDF');
         throw new Error('No text content could be extracted from the PDF');
       }
 
-      console.log('Successfully extracted text, length:', normalizedText.length);
-      return normalizedText;
+      // Clean up and normalize text
+      const cleanedText = data.text
+        .replace(/\s+/g, ' ')  // Replace multiple spaces with single space
+        .replace(/[\r\n]+/g, '\n')  // Normalize line endings
+        .trim();
+
+      if (cleanedText.length === 0) {
+        throw new Error('Extracted text is empty after cleaning');
+      }
+
+      console.log('Successfully extracted text, length:', cleanedText.length);
+      return cleanedText;
 
     } catch (error: any) {
       console.error('PDF processing error:', error);
