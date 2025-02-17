@@ -4,12 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
-import { MessageCircle, Send, Sparkles, Search, Globe } from "lucide-react";
+import { MessageCircle, Send, Sparkles, Search, Globe, Link } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
+  citations?: string[]; // Add citations for web search responses
 }
 
 interface ChatInterfaceProps {
@@ -69,10 +70,9 @@ export function ChatInterface({
           {context && (
             <div className="bg-muted/50 rounded-lg p-3 text-sm">
               <p className="text-muted-foreground">
-                {isWebSearch 
-                  ? "Ask anything and I'll search the web for comprehensive answers." 
-                  : context
-                }
+                {isWebSearch
+                  ? "Ask anything and I'll search the web for comprehensive answers with citations."
+                  : context}
               </p>
             </div>
           )}
@@ -102,13 +102,35 @@ export function ChatInterface({
               </div>
               <div
                 className={cn(
-                  "rounded-lg px-3 py-2 max-w-[80%]",
+                  "rounded-lg px-3 py-2 max-w-[80%] space-y-2",
                   message.role === "assistant"
                     ? "bg-muted/50 text-foreground"
                     : "bg-primary text-primary-foreground"
                 )}
               >
-                {message.content}
+                <div>{message.content}</div>
+                {message.role === "assistant" && message.citations && message.citations.length > 0 && (
+                  <div className="border-t pt-2 mt-2 space-y-1">
+                    <p className="text-xs font-medium flex items-center gap-1">
+                      <Link className="w-3 h-3" />
+                      Sources:
+                    </p>
+                    <ul className="text-xs space-y-1 text-muted-foreground">
+                      {message.citations.map((citation, i) => (
+                        <li key={i}>
+                          <a
+                            href={citation}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:underline hover:text-primary"
+                          >
+                            {citation}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
           ))}

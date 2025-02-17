@@ -46,6 +46,7 @@ interface RankedIdea {
 interface Message {
   role: "user" | "assistant";
   content: string;
+  citations?: string[]; // Added citations property
 }
 
 export function NovelResearchTab() {
@@ -83,7 +84,7 @@ export function NovelResearchTab() {
           context: selectedIdea
             ? JSON.stringify(selectedIdea)
             : JSON.stringify(generateMutation.data),
-          type: "web-search" 
+          type: "web-search"
         });
 
         const contentType = res.headers.get("content-type");
@@ -107,7 +108,11 @@ export function NovelResearchTab() {
       setMessages(prev => [
         ...prev,
         { role: "user", content: message },
-        { role: "assistant", content: response }
+        {
+          role: "assistant",
+          content: response.response || response,
+          citations: response.citations
+        }
       ]);
     },
     onError: (error) => {
