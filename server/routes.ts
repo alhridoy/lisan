@@ -5,57 +5,75 @@ import { analyzeQuery, generatePaperSummary, calculateRelevanceScore, generateSt
 import { searchArxiv } from "./services/arxiv";
 import { searchSemanticScholar } from "./services/semantic-scholar";
 import { insertPaperSchema } from "@shared/schema";
-import { extractTextFromDocument } from "./services/document-processor";
-import multer from "multer";
 import OpenAI from "openai";
-import * as fs from "fs";
-import * as path from "path";
 
 // Initialize OpenAI
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Ensure uploads directory exists with proper permissions
-const uploadDir = path.join(process.cwd(), "uploads");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true, mode: 0o755 });
-}
-
-// Configure multer for file upload with file filter
-const upload = multer({
-  dest: uploadDir,
-  fileFilter: (req, file, cb) => {
-    console.log('Received file:', file.originalname, 'with mimetype:', file.mimetype);
-
-    // Check file mimetype and extension
-    const allowedMimeTypes = [
-      'application/pdf',
-      'application/x-pdf',
-      'application/acrobat',
-      'application/vnd.pdf',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    ];
-
-    const fileExtension = file.originalname.toLowerCase().split('.').pop();
-    console.log('File extension:', fileExtension);
-
-    if (allowedMimeTypes.includes(file.mimetype) || 
-        (fileExtension === 'pdf' && file.mimetype.includes('pdf'))) {
-      console.log('File type validated successfully');
-      cb(null, true);
-    } else {
-      console.log('File type validation failed. Mimetype:', file.mimetype);
-      cb(new Error('Invalid file type. Please upload a PDF or DOCX file.'));
-    }
-  },
-  limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
-  }
-});
-
 export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);
+
+  app.post("/api/chat", async (req, res) => {
+    try {
+      const { message, context, type } = req.body;
+
+      if (!message || typeof message !== "string") {
+        return res.status(400).json({ error: "Invalid message" });
+      }
+
+      // Make context optional for web search
+      if (type !== "web-search" && (!context || typeof context !== "string")) {
+        return res.status(400).json({ error: "Invalid context" });
+      }
+
+      if (!type || !["deep-research", "novel-ideas", "web-search"].includes(type)) {
+        return res.status(400).json({ error: "Invalid type" });
+      }
+
+      console.log("Processing chat request:", { type, messageLength: message.length });
+
+      let response;
+      if (type === "web-search") {
+        // Enhance the query first
+        const enhancedQuery = await analyzeQuery(message);
+
+        // Use OpenAI to generate a web-optimized search response
+        const searchResponse = await openai.chat.completions.create({
+          model: "gpt-4o", // Using the latest model
+          messages: [
+            {
+              role: "system",
+              content: `You are a research assistant helping to find and analyze information from the web. 
+              When responding:
+              1. Break down complex topics into key aspects
+              2. Cite sources when possible
+              3. Highlight any conflicting information found
+              4. Suggest related topics to explore
+              5. Use bullet points for clarity`
+            },
+            {
+              role: "user", 
+              content: `Query: ${message}
+              Enhanced search terms: ${enhancedQuery.enhancedQuery}
+              Please provide a comprehensive analysis of this topic.`
+            }
+          ],
+        });
+
+        response = searchResponse.choices[0].message.content;
+      } else {
+        // Handle existing chat types
+        response = await generateChatResponse(message, context, type as "deep-research" | "novel-ideas");
+      }
+
+      res.json({ response });
+    } catch (error: any) {
+      console.error("Chat error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
 
   app.post("/api/search", async (req, res) => {
     try {
@@ -280,124 +298,6 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  app.post("/api/peer-review", upload.single("file"), async (req, res) => {
-    let filePath: string | undefined;
-
-    try {
-      if (!req.file) {
-        return res.status(400).json({ error: "No file uploaded" });
-      }
-
-      filePath = req.file.path;
-      console.log("Processing uploaded file for peer review:", req.file.originalname);
-      console.log("File details:", {
-        filename: req.file.filename,
-        mimetype: req.file.mimetype,
-        size: req.file.size,
-        path: req.file.path
-      });
-
-      // Verify file exists before processing
-      try {
-        await fs.promises.access(filePath, fs.constants.R_OK);
-        console.log("File exists and is readable:", filePath);
-      } catch (error) {
-        console.error("File access error:", error);
-        throw new Error("Uploaded file not accessible");
-      }
-
-      // Extract text from the uploaded document
-      const text = await extractTextFromDocument(filePath);
-      console.log("Text extraction successful, length:", text.length);
-
-      if (!text || text.trim().length === 0) {
-        throw new Error("No text could be extracted from the document");
-      }
-
-      // Use OpenAI to analyze the paper
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o", // Using the latest model
-        messages: [{
-          role: "user",
-          content: `You are an expert academic peer reviewer. Review this academic paper and provide detailed feedback.
-            Consider methodology, literature review, clarity, and scientific rigor.
-
-            Paper text:
-            ${text}
-
-            Provide your review in JSON format with:
-            {
-              "generalFeedback": "Overall assessment of the paper",
-              "methodologyAnalysis": {
-                "strengths": ["list of methodological strengths"],
-                "gaps": ["identified gaps or weaknesses"],
-                "recommendations": ["specific suggestions for improvement"]
-              },
-              "literatureReview": {
-                "relevantPapers": [
-                  {
-                    "title": "paper title",
-                    "authors": ["author names"],
-                    "year": year,
-                    "relevance": "explanation of relevance"
-                  }
-                ],
-                "suggestedRemovals": [
-                  {
-                    "citation": "citation text",
-                    "reason": "reason for suggesting removal"
-                  }
-                ]
-              },
-              "writingStyle": {
-                "clarity": "assessment of writing clarity",
-                "improvements": ["suggested writing improvements"]
-              }
-            }`
-        }],
-        response_format: { type: "json_object" }
-      });
-
-      const result = JSON.parse(response.choices[0].message.content);
-      res.json(result);
-
-    } catch (error: any) {
-      console.error("Peer review error:", error);
-      res.status(500).json({ error: error.message });
-    } finally {
-      // Clean up uploaded file
-      if (filePath) {
-        try {
-          await fs.promises.unlink(filePath);
-          console.log("Temporary file cleaned up:", filePath);
-        } catch (error) {
-          console.error("Error deleting uploaded file:", error);
-        }
-      }
-    }
-  });
-
-  app.get("/api/papers/:id", async (req, res) => {
-    try {
-      const paper = await storage.getPaper(parseInt(req.params.id));
-      if (!paper) {
-        return res.status(404).json({ error: "Paper not found" });
-      }
-      res.json(paper);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch paper" });
-    }
-  });
-
-  app.get("/api/recent-searches", async (req, res) => {
-    try {
-      const searches = await storage.getRecentSearches();
-      res.json(searches);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch recent searches" });
-    }
-  });
-
   app.post("/api/novel-ideas", async (req, res) => {
     try {
       const { topic } = req.body;
@@ -410,33 +310,6 @@ export async function registerRoutes(app: Express) {
       res.json(ideas);
     } catch (error: any) {
       console.error("Novel ideas generation error:", error);
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.post("/api/chat", async (req, res) => {
-    try {
-      const { message, context, type } = req.body;
-
-      if (!message || typeof message !== "string") {
-        return res.status(400).json({ error: "Invalid message" });
-      }
-
-      if (!context || typeof context !== "string") {
-        return res.status(400).json({ error: "Invalid context" });
-      }
-
-      if (!type || !["deep-research", "novel-ideas"].includes(type)) {
-        return res.status(400).json({ error: "Invalid type" });
-      }
-
-      console.log("Processing chat request:", { type, messageLength: message.length });
-
-      const response = await generateChatResponse(message, context, type as "deep-research" | "novel-ideas");
-
-      res.json({ response });
-    } catch (error: any) {
-      console.error("Chat error:", error);
       res.status(500).json({ error: error.message });
     }
   });
