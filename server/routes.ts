@@ -31,12 +31,21 @@ const upload = multer({
     // Check file mimetype
     const allowedMimeTypes = [
       'application/pdf',
+      'application/x-pdf',
+      'application/acrobat',
+      'application/vnd.pdf',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     ];
 
-    if (allowedMimeTypes.includes(file.mimetype)) {
+    const fileExtension = file.originalname.toLowerCase().split('.').pop();
+    console.log('File extension:', fileExtension);
+
+    if (allowedMimeTypes.includes(file.mimetype) || 
+        (fileExtension === 'pdf' && file.mimetype.includes('pdf'))) {
+      console.log('File type validated successfully');
       cb(null, true);
     } else {
+      console.log('File type validation failed. Mimetype:', file.mimetype);
       cb(new Error('Invalid file type. Please upload a PDF or DOCX file.'));
     }
   },

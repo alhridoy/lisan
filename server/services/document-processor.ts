@@ -37,7 +37,7 @@ export async function extractTextFromDocument(filePath: string): Promise<string>
     const fileExtension = path.extname(filePath).toLowerCase();
 
     // Process based on file type
-    if (fileExtension === '.pdf') {
+    if (fileExtension === '.pdf' || fileExtension.includes('pdf')) {
       try {
         console.log('Processing PDF file:', path.basename(filePath));
         console.log('File size:', fileBuffer.length, 'bytes');
