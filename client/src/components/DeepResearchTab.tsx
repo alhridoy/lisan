@@ -157,6 +157,48 @@ export function DeepResearchTab() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Cross-Study Analysis */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Cross-Study Analysis</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="prose max-w-none">
+                <div className="whitespace-pre-wrap">
+                  {researchMutation.data.fullText.split("Cross-Study Analysis")[1]?.split("References")[0] || ""}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Success Metrics & Implementation Requirements */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Implementation Insights</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="prose max-w-none">
+                <div className="whitespace-pre-wrap">
+                  {researchMutation.data.fullText.split("Success Metrics:")[1]?.split("References")[0] || ""}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* References */}
+          <Card>
+            <CardHeader>
+              <CardTitle>References</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="prose max-w-none">
+                <div className="whitespace-pre-wrap">
+                  {researchMutation.data.fullText.split("References")[1] || ""}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>
