@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isErrorResponse } from "@/lib/api-types";
+import { Download } from "lucide-react";
 
 interface StudyAnalysis {
   study: string;
@@ -20,6 +21,7 @@ interface StudyAnalysis {
 interface DeepResearchResponse {
   abstractAndMethod: string;
   studies: StudyAnalysis[];
+  fullText: string;
 }
 
 export function DeepResearchTab() {
@@ -53,6 +55,20 @@ export function DeepResearchTab() {
     e.preventDefault();
     if (!query.trim()) return;
     researchMutation.mutate(query);
+  };
+
+  const handleDownload = () => {
+    if (!researchMutation.data?.fullText) return;
+
+    const blob = new Blob([researchMutation.data.fullText], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `research-report-${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
   };
 
   return (
@@ -91,8 +107,12 @@ export function DeepResearchTab() {
         <div className="space-y-6">
           {/* Abstract & Method Section */}
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle>Abstract & Method</CardTitle>
+              <Button variant="outline" size="sm" onClick={handleDownload}>
+                <Download className="h-4 w-4 mr-2" />
+                Download Report
+              </Button>
             </CardHeader>
             <CardContent>
               <p className="whitespace-pre-wrap">{researchMutation.data.abstractAndMethod}</p>
@@ -124,7 +144,7 @@ export function DeepResearchTab() {
                         <TableCell>{study.researchFocus}</TableCell>
                         <TableCell className="max-w-md">{study.analysis}</TableCell>
                         <TableCell className="max-w-xs">
-                          <ul className="list-disc pl-4">
+                          <ul className="list-disc pl-4 space-y-1">
                             {study.references.map((ref, i) => (
                               <li key={i} className="text-sm">{ref}</li>
                             ))}

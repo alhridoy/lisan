@@ -161,6 +161,7 @@ export async function generateDeepResearch(
     analysis: string;
     references: string[];
   }>;
+  fullText: string; // Added for downloadable report
 }> {
   try {
     console.log("Generating deep research analysis for papers:", papers.length);
@@ -168,27 +169,30 @@ export async function generateDeepResearch(
     if (!papers.length) {
       return {
         abstractAndMethod: "No papers found for analysis.",
-        studies: []
+        studies: [],
+        fullText: "No papers found for analysis."
       };
     }
 
     const prompt = `Analyze these academic papers related to "${query}" and provide a detailed research analysis.
+Include proper academic citations and references.
 
 Papers to analyze:
 ${papers.map(p => `Title: ${p.title}\nAbstract: ${p.abstract}\n---`).join('\n')}
 
 Return a JSON object with:
 {
-  "abstractAndMethod": "A comprehensive overview of the research area and methodologies used across studies",
+  "abstractAndMethod": "A comprehensive overview of the research area and methodologies used across studies (500-1000 words)",
   "studies": [
     {
-      "study": "Name or brief identifier of the study",
+      "study": "Name or brief identifier of the study (author and year)",
       "studyType": "Type of research (e.g., Empirical, Theoretical, Case Study)",
       "researchFocus": "Main research questions or objectives",
       "analysis": "Key findings and implications",
-      "references": ["List of relevant citations"]
+      "references": ["Full academic citations in a consistent format"]
     }
-  ]
+  ],
+  "fullText": "A complete report including: Title, Date, Abstract, Methods, Results (with characteristics of included studies), Thematic Analysis, Cross-Study Analysis, and References. Format similar to an academic paper with proper sections and citations."
 }`;
 
     console.log("Sending request to OpenAI for deep research analysis...");
@@ -196,7 +200,7 @@ Return a JSON object with:
       model: "gpt-4o",
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
-      max_tokens: 2000
+      max_tokens: 4000
     });
 
     const content = response.choices[0].message.content || "{}";
@@ -205,7 +209,8 @@ Return a JSON object with:
     const result = JSON.parse(content);
     return {
       abstractAndMethod: result.abstractAndMethod || "No abstract available",
-      studies: result.studies || []
+      studies: result.studies || [],
+      fullText: result.fullText || "No full text available"
     };
   } catch (error: any) {
     console.error("OpenAI deep research analysis error:", error);

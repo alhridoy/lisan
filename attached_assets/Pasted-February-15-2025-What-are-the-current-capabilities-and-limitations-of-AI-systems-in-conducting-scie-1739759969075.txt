@@ -1,0 +1,300 @@
+February 15, 2025
+What are the current capabilities and limitations of AI systems in conducting scientific research across different academic disciplines?
+Current AI systems excel at structured research tasks in STEM fields but struggle with complex reasoning and qualitative interpretation, particularly in humanities and social sciences.
+Abstract
+This report examines the capabilities and limitations of AI systems in scientific research based on nine studies published between 2021 and 2025. The included studies comprise literature reviews, mixed-methods studies, and qualitative analyses examining AI applications across academic disciplines.
+
+The studies included found that AI tools can support various research tasks. According to the reviewed studies, AI applications showed utility in literature review processes, peer review assistance, and research workflow automation. One study reported a 73% reduction in peer reviewer selection time when using AI-assisted matching tools. Studies in STEM fields reported higher accuracy rates for AI tools compared to those in humanities and social sciences.
+
+The reviewed literature identified several limitations. Studies consistently reported accuracy issues, including AI hallucinations and variable response quality, particularly for tasks requiring complex reasoning. Technical constraints, such as context window limits and usage restrictions, were documented across multiple studies. Five of the nine studies specifically noted that AI tools performed less reliably in disciplines requiring nuanced interpretation of qualitative data.
+
+Ethical considerations featured prominently in the reviewed studies. Seven studies emphasized the importance of developing clear guidelines for responsible AI use and maintaining transparency in research processes. The studies consistently positioned AI as a supplementary tool rather than a replacement for human expertise, with six studies providing specific frameworks for human-AI collaboration in research settings.
+
+The reviewed studies proposed various implementation approaches, including quality control measures and integration guidelines. These frameworks emphasized AI literacy training, ongoing tool evaluation, and standardized reporting of AI use in research methodologies.
+
+Based on the reviewed literature, while AI tools can enhance certain research tasks, their effective use requires careful attention to limitations, ethical considerations, and the need for human oversight. The studies suggest that future research should examine discipline-specific applications and long-term impacts of AI integration in academic research.
+
+Methods
+We analyzed 9 papers from an initial pool of 100, using 8 screening criteria. Each paper was reviewed for 6 key aspects that mattered most to the research question. More on methods
+Results
+Characteristics of Included Studies
+
+
+
+
+
+
+Carabantes-Alarcón et al., 2023
+
+No
+
+Mixed-methods study
+
+AI-assisted academic reviews
+
+No mention found
+
+AI models show potential in reviewing scientific articles but have limitations such as hallucinations and context window limits
+
+Castillo-Segura et al., 2024
+
+No
+
+Systematic literature review
+
+AI tools for Systematic Literature Reviews (SLRs)
+
+Engineering education
+
+AI tools are effective for basic SLR tasks but have limitations in full-text information retrieval and daily usage
+
+Danler et al., 2024
+
+No
+
+Systematic literature review, Qualitative analysis
+
+Free AI tools for literature review and analysis
+
+General academic research
+
+Free AI tools for literature review show variable response quality and lack transparency in source selection
+
+Ejjami, 2024
+
+Yes
+
+Systematic literature review
+
+Integrative Literature Review (ILR) 5.0
+
+Technology, Data Science, Ethics, Research Management
+
+AI improves efficiency and comprehensiveness in literature reviews but struggles with nuanced interpretation
+
+Farber, 2024
+
+No
+
+Mixed-methods study
+
+AI-assisted reviewer selection
+
+Diverse disciplines with focus on Science, Technology, Engineering, and Mathematics (STEM) fields
+
+AI-assisted reviewer selection shows moderate overlap with human choices and significant time efficiency improvements
+
+Khalifa et al., "Using Artificial Intelligence in Academic Writing"
+
+No
+
+Systematic literature review
+
+AI in academic writing
+
+Multiple disciplines
+
+AI supports academic writing in various domains but faces challenges in maintaining academic integrity
+
+Morande, 2023
+
+No
+
+Mixed-methods study
+
+Benchmarking generative AI models
+
+Multiple disciplines
+
+Generative AI models show promising competencies in focused tasks but have limitations in contextual adaptation and reasoning
+
+Salman et al., 2025
+
+No
+
+Systematic literature review
+
+Generative AI tools in academic research
+
+Multiple disciplines
+
+Generative AI tools are becoming integral to academic research but require further research on ethical use and policy development
+
+Xu et al., 2021
+
+No
+
+Systematic literature review
+
+AI in fundamental sciences
+
+Information science, mathematics, medical science, materials science, geoscience, life science, physics, chemistry
+
+AI capabilities include mimicking human cognitive functions and enhancing research efficiency across various scientific disciplines
+
+Based on the available information in the abstracts or full texts, we identified 9 studies that appeared to address various aspects of AI capabilities and limitations in academic research across different disciplines. The studies encompassed a range of research foci, from AI-assisted academic reviews to generative AI tools in research, and covered multiple disciplines with a notable emphasis on STEM fields.
+
+Thematic Analysis
+Current AI Capabilities in Academic Research
+Literature Synthesis and Review
+Efficiency and Comprehensiveness:
+
+Ejjami (2024) reports that AI improves efficiency and comprehensiveness in literature reviews through the Integrative Literature Review (ILR) 5.0 approach.
+This approach utilizes AI for tasks such as identifying themes, automating coding, and processing large volumes of text.
+Effectiveness for Basic Tasks:
+
+Castillo-Segura et al. (2024) find that AI tools are effective for basic tasks in Systematic Literature Reviews (SLRs), such as paper screening and classification.
+Limitations:
+
+Full-text information retrieval remains a challenge for AI tools in SLRs (Castillo-Segura et al., 2024).
+Danler et al. (2024) report variable response quality in free AI tools for literature review.
+Peer Review Assistance
+Potential and Limitations:
+
+Carabantes-Alarcón et al. (2023) identify potential for AI in reviewing scientific articles but note limitations such as hallucinations and context window limits.
+Reviewer Selection:
+
+Farber (2024) reports a moderate overlap (42%) between AI-suggested reviewers and editors' selections.
+Significant time efficiency improvement, with AI reducing selection time by 73%.
+Research Workflow Automation
+Efficiency Enhancement:
+
+Xu et al. (2021) highlight AI's capabilities in enhancing research efficiency across various scientific disciplines.
+Writing Support:
+
+Khalifa et al. discuss AI's support in academic writing across various domains, including idea generation and content structuring.
+Limitations:
+
+Ejjami (2024) notes that AI struggles with nuanced interpretation in literature reviews.
+Morande (2023) identifies limitations in contextual adaptation and reasoning for generative AI models.
+Performance Across Disciplines
+STEM vs. Humanities Differences {#stem-vs-humanities-differences}
+STEM Focus:
+
+Farber (2024) reports higher accuracy of AI-assisted reviewer selection in STEM fields compared to other disciplines (Cohen's d = 0.68).
+Xu et al. (2021) provide a comprehensive overview of AI applications across various fundamental sciences.
+Limited Comparison:
+
+The studies included do not provide an extensive comparison between STEM and humanities disciplines.
+Discipline-specific Accuracy Rates
+Limited Quantitative Data:
+Specific accuracy rates for different fields are not consistently reported across the reviewed studies.
+Farber (2024) provides the most concrete comparative data, reporting a 42% overlap between AI-suggested reviewers and editors' selections across disciplines.
+Application Variations
+Engineering Education:
+
+Castillo-Segura et al. (2024) focus on AI tools for SLRs in engineering education.
+Multidisciplinary Approach:
+
+Ejjami (2024) introduces the ILR 5.0 concept, applying AI techniques across multiple disciplines.
+Fundamental Sciences:
+
+Xu et al. (2021) provide examples of AI applications across various fundamental sciences.
+Limitations and Challenges
+Technical Constraints
+Context Window Limits: Identified by Carabantes-Alarcón et al. (2023) as a limitation in reviewing scientific articles.
+Information Retrieval: Castillo-Segura et al. (2024) note limitations in full-text information retrieval for AI tools in SLRs.
+Usage Restrictions: Daily operation limits reported by Castillo-Segura et al. (2024).
+Accuracy and Reliability Issues
+Hallucinations: Mentioned by Carabantes-Alarcón et al. (2023) as a limitation in academic review tasks.
+Variable Response Quality: Reported by Danler et al. (2024) for free AI tools in literature review.
+Contextual Adaptation and Reasoning: Identified by Morande (2023) as challenges for generative AI models.
+Source Selection and Transparency: Highlighted by Danler et al. (2024) as a limitation in AI tools for literature review.
+Disciplinary Gaps
+STEM Focus: Stronger focus on AI applications in STEM fields observed across studies.
+Interdisciplinary Challenges: Farber (2024) notes AI's struggle with understanding interdisciplinary work.
+Nuanced Interpretation: Ejjami (2024) highlights AI's difficulty with nuanced interpretation, potentially challenging in qualitative-heavy disciplines.
+Implementation Framework
+Human-AI Collaboration Models
+Complementary Roles: Ejjami (2024) emphasizes AI as an augmentation tool rather than a replacement for human researchers.
+Oversight in Peer Review: Carabantes-Alarcón et al. (2023) and Farber (2024) highlight the need for human judgment in AI-assisted peer review processes.
+Guided Literature Review: Castillo-Segura et al. (2024) and Danler et al. (2024) suggest a model where AI assists in initial search and categorization, with researchers guiding the process.
+Writing Assistance: Khalifa et al. describe a model where AI supports various aspects of academic writing, with researchers ensuring academic integrity.
+Quality Control Measures
+Verification of AI Outputs: Necessary due to potential hallucinations and variable response quality.
+Transparency in AI Use: Salman et al. (2025) emphasize the need for ethical use guidelines and clear documentation of AI tool usage.
+Cross-checking with Human Expertise: Farber (2024) demonstrates the importance of combining AI suggestions with human judgment.
+Disciplinary Calibration: Quality control measures should be tailored to specific academic fields.
+Regular Evaluation of AI Tools: Castillo-Segura et al. (2024) note the importance of regular evaluation due to rapid AI evolution.
+Best Practices
+AI Literacy Training: Salman et al. (2025) recommend enhancing researchers' AI literacy.
+Ethical Guidelines: Multiple studies stress the need for ethical frameworks for AI use in academic research.
+Interdisciplinary Approach: Fostering collaboration between AI experts and domain specialists to develop more effective AI tools.
+Balanced Integration: Khalifa et al. emphasize balancing AI use with human insight.
+Continuous Monitoring and Adjustment: Given AI's variable performance, continuous monitoring of AI tool effectiveness is crucial.
+Transparency in Reporting: Clearly reporting AI tool use in research methodologies enhances credibility and reproducibility.
+Cross-Study Analysis
+
+
+
+
+Literature Review and Synthesis
+
+Improved efficiency and comprehensiveness; Effective for basic SLR tasks
+
+Variable response quality; Limitations in full-text information retrieval
+
+AI literacy training; Balanced integration with human expertise
+
+Peer Review Assistance
+
+42% overlap with human selections; 73% reduction in selection time
+
+Hallucinations; Context window limits
+
+Human oversight; Discipline-specific calibration
+
+Research Workflow Automation
+
+Enhanced research efficiency; Support in various writing tasks
+
+Struggles with nuanced interpretation; Limitations in contextual adaptation and reasoning
+
+Clear ethical guidelines; Continuous monitoring and adjustment
+
+Cross-disciplinary Application
+
+Broad applicability across sciences
+
+Higher accuracy in STEM fields; Challenges with interdisciplinary work
+
+Interdisciplinary collaboration; Discipline-specific tool development
+
+Academic Writing Support
+
+Assistance in various domains of writing
+
+Challenges in maintaining academic integrity
+
+Balanced use with human insight; Clear documentation of AI use
+
+Based on the available information in the abstracts or full texts, we identified potential success metrics, limitations, and implementation requirements for AI in academic research across five capability categories.
+
+Success Metrics:
+
+Efficiency Improvement: Mentioned in 2/5 categories (Literature Review and Synthesis, Research Workflow Automation)
+Writing Support: Noted in 2/5 categories (Research Workflow Automation, Academic Writing Support)
+Other Metrics: Each found in 1 category, including improved comprehensiveness, effectiveness for basic SLR tasks, overlap with human selections, time reduction, and broad applicability across sciences
+Limitations:
+
+10 distinct limitations identified, each mentioned in one category
+Include: variable response quality, full-text retrieval limitations, hallucinations, context window limits, struggles with nuanced interpretation, limitations in contextual adaptation and reasoning, higher accuracy in STEM fields, challenges with interdisciplinary work, and difficulties maintaining academic integrity
+Implementation Requirements:
+
+Human Involvement: Emphasized in 3/5 categories (integration, oversight, insight)
+Discipline-specific Considerations: Mentioned in 2/5 categories (calibration, tool development)
+Other Requirements: Each found in 1 category, including AI literacy training, ethical guidelines, continuous monitoring and adjustment, interdisciplinary collaboration, and clear documentation of AI use
+We didn't find quantitative measures for most metrics, with the exception of peer review assistance, which reported 42% overlap with human selections and 73% reduction in selection time.
+
+These insights highlight both the potential of AI in enhancing academic research processes and the challenges that need to be addressed for its effective and responsible implementation. The variability in AI performance across tasks and disciplines underscores the need for nuanced, context-specific approaches to AI integration in academic research.
+
+References
+Swapnil Morande (2023). Benchmarking Generative AI: A Comparative Evaluation and Practical Guidelines for Responsible Integration into Academic Research. Social Science Research Network
+Yongjun Xu, Qi Wang, Zhulin An, Fei Wang, Libo Zhang, and 42 more (2021). Artificial intelligence: A powerful paradigm for scientific research. The Innovation
+Mohamed Khalifa, Mona Albadawy, ZoteroMendeley Using artificial intelligence in academic writing and research: An essential productivity tool
+Shai Farber (2024). Enhancing peer review efficiency: A mixed-methods analysis of artificial intelligence-assisted reviewer selection across academic disciplines. Learned Publishing
+Martin Danler, W. Hackl, S. Neururer, Bernhard Pfeifer (2024). Quality and Effectiveness of AI Tools for Students and Researchers for Scientific Literature Review and Analysis. dHealth
+Dr. Rachid Ejjami (2024). Integrative Literature Review 5.0: Leveraging Ai and Emerging Technologies to Redefine Academic Research. International Journal For Multidisciplinary Research
+H. Salman, Muhammad Aliif Ahmad, Roliana Ibrahim, Jamilah Mahmood (2025). Systematic analysis of generative AI tools integration in academic research and peer review. Online Journal of Communication and Media Technologies
+David Carabantes-Alarcón, J. González-Geraldo, Gonzalo Jover (2023). ChatGPT could be the reviewer of your next scientific paper. Evidence on the limits of AI-assisted academic reviews. El Profesional de la Informacion
+Pablo Castillo-Segura, Carmen Fernández-Panadero, C. Alario-Hoyos, C. D. Kloos (2024). Enhancing Research on Engineering Education: Empowering Research Skills through Generative Artificial Intelligence for Systematic Literature Reviews. IEEE Global Engineering Education Conference
