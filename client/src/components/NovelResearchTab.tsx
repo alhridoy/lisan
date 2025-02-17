@@ -46,7 +46,7 @@ interface RankedIdea {
 interface Message {
   role: "user" | "assistant";
   content: string;
-  citations?: string[]; // Added citations property
+  citations?: string[];
 }
 
 export function NovelResearchTab() {
@@ -98,7 +98,8 @@ export function NovelResearchTab() {
           throw new Error(data.error);
         }
 
-        return data.response as string;
+        // Return both response and citations
+        return data;
       } catch (error: any) {
         console.error("Chat error:", error);
         throw new Error("Failed to send message. Please try again.");
@@ -110,7 +111,7 @@ export function NovelResearchTab() {
         { role: "user", content: message },
         {
           role: "assistant",
-          content: response.response || response,
+          content: response.response,
           citations: response.citations
         }
       ]);
