@@ -71,18 +71,30 @@ export function DeepResearchTab() {
 
   const chatMutation = useMutation({
     mutationFn: async (message: string) => {
-      const res = await apiRequest("POST", "/api/chat", {
-        message,
-        context: JSON.stringify(researchMutation.data),
-        type: "deep-research"
-      });
-      const data = await res.json();
+      try {
+        const res = await apiRequest("POST", "/api/chat", {
+          message,
+          context: JSON.stringify(researchMutation.data),
+          type: "deep-research"
+        });
 
-      if (isErrorResponse(data)) {
-        throw new Error(data.error);
+        // Check if response is not JSON
+        const contentType = res.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          throw new Error("Invalid response from server");
+        }
+
+        const data = await res.json();
+
+        if (isErrorResponse(data)) {
+          throw new Error(data.error);
+        }
+
+        return data.response as string;
+      } catch (error: any) {
+        console.error("Chat error:", error);
+        throw new Error("Failed to send message. Please try again.");
       }
-
-      return data.response as string;
     },
     onSuccess: (response, message) => {
       setMessages(prev => [
