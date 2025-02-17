@@ -272,13 +272,46 @@ export async function generateNovelIdeas(topic: string): Promise<Array<{
   try {
     console.log("Generating novel research ideas for topic:", topic);
 
-    const prompt = `Generate novel research ideas for the topic: "${topic}"
+    // First get related papers from both sources
+    const [arxivResults, semanticScholarResults] = await Promise.all([
+      searchArxiv(topic),
+      searchSemanticScholar(topic)
+    ]);
 
-Use the following process to generate ideas:
-1. Analyze the research landscape
+    // Combine and deduplicate papers
+    const allPapers = [...arxivResults, ...semanticScholarResults];
+    const seenTitles = new Set();
+    const relevantPapers = allPapers.filter(paper => {
+      if (!seenTitles.has(paper.title)) {
+        seenTitles.add(paper.title);
+        return true;
+      }
+      return false;
+    });
+
+    console.log(`Found ${relevantPapers.length} relevant papers for context`);
+
+    // Prepare context from papers
+    const context = relevantPapers.map(paper => `
+Title: ${paper.title}
+Abstract: ${paper.abstract}
+Authors: ${paper.authors.join(', ')}
+${paper.metadata?.year ? `Year: ${paper.metadata.year}` : ''}
+---
+`).join('\n');
+
+    const prompt = `Based on an analysis of these relevant papers:
+
+${context}
+
+Generate novel research ideas for the topic: "${topic}"
+
+Follow this process:
+1. Analyze the research landscape from the provided papers
 2. Identify gaps and opportunities
 3. Generate innovative solutions
 4. Consider interdisciplinary connections
+5. Evaluate against existing approaches
 
 For each idea, provide a detailed analysis in this JSON format:
 {
@@ -287,14 +320,14 @@ For each idea, provide a detailed analysis in this JSON format:
       "idea": {
         "title": "Title of the research idea",
         "problem_statement": "Clear statement of the problem and its significance",
-        "existing_methods": "Analysis of current approaches and their limitations",
-        "motivation": "Why this idea is important and novel",
+        "existing_methods": "Analysis of current approaches and their limitations, citing relevant papers",
+        "motivation": "Why this idea is important and novel, referencing gaps in current literature",
         "proposed_method": "Detailed description of the proposed approach"
       },
       "evaluation": {
         "novelty": {
           "score": number (1-10),
-          "justification": "Detailed explanation of novelty score"
+          "justification": "Detailed explanation of novelty score relative to existing work"
         },
         "feasibility": {
           "score": number (1-10),
@@ -304,7 +337,8 @@ For each idea, provide a detailed analysis in this JSON format:
           "score": number (1-10),
           "justification": "Detailed explanation of impact score"
         },
-        "overall_score": number (1-10)
+        "overall_score": number (1-10),
+        "related_papers": ["List of relevant paper titles that support or relate to this idea"]
       }
     }
   ]
@@ -315,12 +349,12 @@ For each idea, provide a detailed analysis in this JSON format:
       messages: [
         {
           role: "system",
-          content: "You are an expert AI research assistant specialized in generating novel research ideas."
+          content: "You are an expert AI research assistant specialized in analyzing research literature and generating novel research ideas."
         },
         { role: "user", content: prompt }
       ],
       response_format: { type: "json_object" },
-      max_tokens: 3000
+      max_tokens: 4000
     });
 
     const content = response.choices[0].message.content || "{}";
@@ -356,4 +390,16 @@ interface IdeaEvaluation {
     justification: string;
   };
   overall_score: number;
+  related_papers: string[];
+}
+
+// Placeholder functions -  These need to be implemented separately
+async function searchArxiv(topic: string): Promise<Array<{ title: string; abstract: string; authors: string[]; metadata: { year?: number }; }>> {
+    //Implementation to search arXiv for papers related to the topic.  Return an array of papers.
+    return [];
+}
+
+async function searchSemanticScholar(topic: string): Promise<Array<{ title: string; abstract: string; authors: string[]; metadata: { year?: number }; }>> {
+    //Implementation to search Semantic Scholar for papers related to the topic. Return an array of papers.
+    return [];
 }

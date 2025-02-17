@@ -10,11 +10,6 @@ import { isErrorResponse } from "@/lib/api-types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 
-interface SeedIdea {
-  title: string;
-  description: string;
-}
-
 interface ExpandedIdea {
   title: string;
   problem_statement: string;
@@ -37,6 +32,7 @@ interface IdeaEvaluation {
     justification: string;
   };
   overall_score: number;
+  related_papers: string[];
 }
 
 interface RankedIdea {
@@ -152,9 +148,17 @@ export function NovelResearchTab() {
                     </div>
                   </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold mb-2">Proposed Method</h3>
+                <div className="space-y-4">
+                  <h3 className="font-semibold">Existing Methods & Limitations</h3>
+                  <p>{rankedIdea.idea.existing_methods}</p>
+                  <h3 className="font-semibold">Proposed Method</h3>
                   <p>{rankedIdea.idea.proposed_method}</p>
+                  <h3 className="font-semibold">Related Papers</h3>
+                  <ul className="list-disc list-inside space-y-1">
+                    {rankedIdea.evaluation.related_papers.map((paper, i) => (
+                      <li key={i} className="text-sm text-muted-foreground">{paper}</li>
+                    ))}
+                  </ul>
                 </div>
               </CardContent>
             </Card>
