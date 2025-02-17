@@ -34,40 +34,24 @@ export async function extractTextFromDocument(filePath: string): Promise<string>
 
     // Read the file buffer
     const fileBuffer = await fs.readFile(filePath);
-    const fileExtension = path.extname(filePath).toLowerCase();
+    console.log('Read file buffer, size:', fileBuffer.length);
 
-    // Process based on file type
-    if (fileExtension === '.pdf' || fileExtension.includes('pdf')) {
-      try {
-        console.log('Processing PDF file:', path.basename(filePath));
-        console.log('File size:', fileBuffer.length, 'bytes');
+    try {
+      // Dynamically import pdf-parse
+      const PDFParser = (await import('pdf-parse')).default;
+      console.log('PDF parser imported successfully');
 
-        // Dynamically import pdf-parse
-        const PDFParser = (await import('pdf-parse')).default;
-        const pdfData = await PDFParser(fileBuffer);
+      const pdfData = await PDFParser(fileBuffer);
+      console.log('PDF parsing completed, text length:', pdfData.text?.length || 0);
 
-        if (!pdfData.text || pdfData.text.trim().length === 0) {
-          throw new Error('No text content found in PDF file');
-        }
-
-        return pdfData.text;
-      } catch (error: any) {
-        console.error('PDF processing error:', error);
-        throw new Error('Failed to process PDF file. Please ensure the file is not corrupted or password protected.');
+      if (!pdfData.text || pdfData.text.trim().length === 0) {
+        throw new Error('No text content found in PDF file');
       }
-    } else if (fileExtension === '.docx') {
-      try {
-        const result = await mammoth.extractRawText({ buffer: fileBuffer });
-        if (!result.value || result.value.trim().length === 0) {
-          throw new Error('No text content found in DOCX file');
-        }
-        return result.value;
-      } catch (error: any) {
-        console.error('DOCX processing error:', error);
-        throw new Error('Failed to process DOCX file. Please ensure the file is not corrupted.');
-      }
-    } else {
-      throw new Error('Unsupported file type. Please upload a PDF or DOCX file.');
+
+      return pdfData.text;
+    } catch (error: any) {
+      console.error('PDF processing error:', error);
+      throw new Error('Failed to process PDF file. Please ensure the file is not corrupted or password protected.');
     }
   } catch (error: any) {
     console.error('Document processing error:', error);
