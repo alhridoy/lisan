@@ -72,7 +72,9 @@ export function DeepResearchTab() {
   };
 
   // Helper function to extract section content
-  const extractSection = (text: string, sectionName: string, endSection?: string) => {
+  const extractSection = (text: string | undefined | null, sectionName: string, endSection?: string) => {
+    if (!text || typeof text !== 'string') return "";
+
     const sections = text.split(/\n(?=\w+:|\w+ Metrics:|\w+ Requirements:)/);
     const section = sections.find(s => s.trim().startsWith(sectionName));
     if (!section) return "";
