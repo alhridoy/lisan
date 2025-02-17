@@ -395,11 +395,53 @@ interface IdeaEvaluation {
 
 // Placeholder functions -  These need to be implemented separately
 async function searchArxiv(topic: string): Promise<Array<{ title: string; abstract: string; authors: string[]; metadata: { year?: number }; }>> {
-    //Implementation to search arXiv for papers related to the topic.  Return an array of papers.
-    return [];
+  //Implementation to search arXiv for papers related to the topic.  Return an array of papers.
+  return [];
 }
 
 async function searchSemanticScholar(topic: string): Promise<Array<{ title: string; abstract: string; authors: string[]; metadata: { year?: number }; }>> {
-    //Implementation to search Semantic Scholar for papers related to the topic. Return an array of papers.
-    return [];
+  //Implementation to search Semantic Scholar for papers related to the topic. Return an array of papers.
+  return [];
+}
+
+export async function generateChatResponse(
+  message: string,
+  context: string,
+  type: "deep-research" | "novel-ideas"
+): Promise<string> {
+  try {
+    console.log(`Generating chat response for ${type} with context length: ${context.length}`);
+
+    let systemPrompt = "";
+    if (type === "deep-research") {
+      systemPrompt = `You are a research assistant helping users understand a deep research analysis. 
+Use the provided research context to answer questions accurately and informatively.
+If a question cannot be answered using the provided context, acknowledge that and suggest what additional information might be needed.`;
+    } else {
+      systemPrompt = `You are a research ideation assistant helping users explore novel research ideas. 
+Use the provided idea context to answer questions about methodology, implications, and potential developments.
+If a question cannot be answered using the provided context, acknowledge that and suggest what additional information might be needed.`;
+    }
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: systemPrompt
+        },
+        {
+          role: "user",
+          content: `Context:\n${context}\n\nUser Question: ${message}`
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: 1000
+    });
+
+    return response.choices[0].message.content || "I apologize, but I couldn't generate a response. Please try rephrasing your question.";
+  } catch (error: any) {
+    console.error("OpenAI chat response generation error:", error);
+    throw new Error(`Failed to generate chat response: ${error.message}`);
+  }
 }

@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
-import { analyzeQuery, generatePaperSummary, calculateRelevanceScore, generateStructuredSummaries, generateDeepResearch, generateNovelIdeas } from "./services/openai";
+import { analyzeQuery, generatePaperSummary, calculateRelevanceScore, generateStructuredSummaries, generateDeepResearch, generateNovelIdeas, generateChatResponse } from "./services/openai";
 import { searchArxiv } from "./services/arxiv";
 import { searchSemanticScholar } from "./services/semantic-scholar";
 import { insertPaperSchema } from "@shared/schema";
@@ -318,6 +318,33 @@ export async function registerRoutes(app: Express) {
       res.json(ideas);
     } catch (error: any) {
       console.error("Novel ideas generation error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/chat", async (req, res) => {
+    try {
+      const { message, context, type } = req.body;
+
+      if (!message || typeof message !== "string") {
+        return res.status(400).json({ error: "Invalid message" });
+      }
+
+      if (!context || typeof context !== "string") {
+        return res.status(400).json({ error: "Invalid context" });
+      }
+
+      if (!type || !["deep-research", "novel-ideas"].includes(type)) {
+        return res.status(400).json({ error: "Invalid type" });
+      }
+
+      console.log("Processing chat request:", { type, messageLength: message.length });
+
+      const response = await generateChatResponse(message, context, type as "deep-research" | "novel-ideas");
+
+      res.json({ response });
+    } catch (error: any) {
+      console.error("Chat error:", error);
       res.status(500).json({ error: error.message });
     }
   });
