@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
-const openai = new OpenAI({ 
+const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
@@ -161,7 +161,16 @@ export async function generateDeepResearch(
     analysis: string;
     references: string[];
   }>;
-  fullText: string; // Added for downloadable report
+  fullText: string;
+  visualization: {
+    points: Array<{
+      x: number;
+      y: number;
+      isOutlier: boolean;
+      title: string;
+      authors: string[];
+    }>;
+  };
 }> {
   try {
     console.log("Generating deep research analysis for papers:", papers.length);
@@ -170,11 +179,12 @@ export async function generateDeepResearch(
       return {
         abstractAndMethod: "No papers found for analysis.",
         studies: [],
-        fullText: "No papers found for analysis."
+        fullText: "No papers found for analysis.",
+        visualization: { points: [] }
       };
     }
 
-    const prompt = `Analyze these academic papers related to "${query}" and provide a detailed research analysis.
+    const prompt = `Analyze these academic papers related to "${query}" and provide a detailed research analysis with visualization coordinates.
 Include proper academic citations and references.
 
 Papers to analyze:
@@ -192,7 +202,18 @@ Return a JSON object with:
       "references": ["Full academic citations in the format: LastName, FirstName. (Year). Title. Journal/Conference, etc."]
     }
   ],
-  "fullText": "A complete report including: Title, Date, Abstract, Methods, Results (with characteristics of included studies), Thematic Analysis, Cross-Study Analysis, and References. For References, ensure each entry follows proper academic citation format with author names, year, title, and publication details. For unknown authors, use the format: LastName, FirstName or Organization Name if available, otherwise omit author field and start with title."
+  "fullText": "A complete report including: Title, Date, Abstract, Methods, Results (with characteristics of included studies), Thematic Analysis, Cross-Study Analysis, and References. For References, ensure each entry follows proper academic citation format with author names, year, title, and publication details. For unknown authors, use the format: LastName, FirstName or Organization Name if available, otherwise omit author field and start with title.",
+  "visualization": {
+    "points": [
+      {
+        "x": number,
+        "y": number,
+        "isOutlier": boolean,
+        "title": "paper title",
+        "authors": ["author names"]
+      }
+    ]
+  }
 }`;
 
     console.log("Sending request to OpenAI for deep research analysis...");
@@ -210,7 +231,8 @@ Return a JSON object with:
     return {
       abstractAndMethod: result.abstractAndMethod || "No abstract available",
       studies: result.studies || [],
-      fullText: result.fullText || "No full text available"
+      fullText: result.fullText || "No full text available",
+      visualization: result.visualization || { points: [] }
     };
   } catch (error: any) {
     console.error("OpenAI deep research analysis error:", error);

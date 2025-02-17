@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isErrorResponse } from "@/lib/api-types";
 import { Download } from "lucide-react";
+import { KnowledgeGraph } from "./KnowledgeGraph";
 
 interface StudyAnalysis {
   study: string;
@@ -22,6 +23,15 @@ interface DeepResearchResponse {
   abstractAndMethod: string;
   studies: StudyAnalysis[];
   fullText: string;
+  visualization?: {
+    points: Array<{
+      x: number;
+      y: number;
+      isOutlier: boolean;
+      title: string;
+      authors: string[];
+    }>;
+  };
 }
 
 export function DeepResearchTab() {
@@ -143,6 +153,13 @@ export function DeepResearchTab() {
               <p className="whitespace-pre-wrap">{researchMutation.data.abstractAndMethod}</p>
             </CardContent>
           </Card>
+
+          {researchMutation.data?.visualization && (
+            <KnowledgeGraph
+              points={researchMutation.data.visualization.points}
+              query={query}
+            />
+          )}
 
           {/* Results Table */}
           <Card>
