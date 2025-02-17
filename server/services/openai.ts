@@ -149,6 +149,16 @@ Paper Metadata: ${JSON.stringify(paper.metadata)}`;
   }
 }
 
+// Update the generateDeepResearch interface to include topic information
+interface Point {
+  x: number;
+  y: number;
+  isOutlier: boolean;
+  title: string;
+  authors: string[];
+  topic?: string;
+}
+
 export async function generateDeepResearch(
   papers: { title: string; abstract: string }[],
   query: string
@@ -163,13 +173,7 @@ export async function generateDeepResearch(
   }>;
   fullText: string;
   visualization: {
-    points: Array<{
-      x: number;
-      y: number;
-      isOutlier: boolean;
-      title: string;
-      authors: string[];
-    }>;
+    points: Point[];
   };
 }> {
   try {
@@ -184,8 +188,8 @@ export async function generateDeepResearch(
       };
     }
 
-    const prompt = `Analyze these academic papers related to "${query}" and provide a detailed research analysis with visualization coordinates.
-Include proper academic citations and references.
+    const prompt = `Analyze these academic papers related to "${query}" and provide a comprehensive research analysis with visualization coordinates and topic mapping.
+Include proper academic citations, references, and detailed cross-study analysis.
 
 Papers to analyze:
 ${papers.map(p => `Title: ${p.title}\nAbstract: ${p.abstract}\n---`).join('\n')}
@@ -202,15 +206,16 @@ Return a JSON object with:
       "references": ["Full academic citations in the format: LastName, FirstName. (Year). Title. Journal/Conference, etc."]
     }
   ],
-  "fullText": "A complete report including: Title, Date, Abstract, Methods, Results (with characteristics of included studies), Thematic Analysis, Cross-Study Analysis, and References. For References, ensure each entry follows proper academic citation format with author names, year, title, and publication details. For unknown authors, use the format: LastName, FirstName or Organization Name if available, otherwise omit author field and start with title.",
+  "fullText": "A complete report including: Title, Date, Abstract, Methods, Results (with characteristics of included studies), Thematic Analysis, Cross-Study Analysis, Success Metrics, Implementation Requirements, and References. For References, ensure each entry follows proper academic citation format with author names, year, title, and publication details. For unknown authors, use the format: LastName, FirstName or Organization Name if available, otherwise omit author field and start with title. The Cross-Study Analysis section should comprehensively analyze relationships, patterns, and contradictions across studies, identifying research gaps and future directions.",
   "visualization": {
     "points": [
       {
-        "x": number,
-        "y": number,
+        "x": number (-10 to 10),
+        "y": number (-10 to 10),
         "isOutlier": boolean,
         "title": "paper title",
-        "authors": ["author names"]
+        "authors": ["author names"],
+        "topic": "main topic or theme of the paper"
       }
     ]
   }
