@@ -6,6 +6,7 @@ import { searchArxiv } from "./services/arxiv";
 import { searchSemanticScholar } from "./services/semantic-scholar";
 import { insertPaperSchema } from "@shared/schema";
 import OpenAI from "openai";
+import { searchWeb } from "./services/tavily";
 
 // Initialize OpenAI
 const openai = new OpenAI({
@@ -36,39 +37,15 @@ export async function registerRoutes(app: Express) {
 
       let response;
       if (type === "web-search") {
-        // Enhance the query first
-        const enhancedQuery = await analyzeQuery(message);
-
-        // Use OpenAI to generate a web-optimized search response
-        const searchResponse = await openai.chat.completions.create({
-          model: "gpt-4o", // Using the latest model
-          messages: [
-            {
-              role: "system",
-              content: `You are a research assistant helping to find and analyze information from the web. 
-              When responding:
-              1. Break down complex topics into key aspects
-              2. Cite sources when possible
-              3. Highlight any conflicting information found
-              4. Suggest related topics to explore
-              5. Use bullet points for clarity`
-            },
-            {
-              role: "user", 
-              content: `Query: ${message}
-              Enhanced search terms: ${enhancedQuery.enhancedQuery}
-              Please provide a comprehensive analysis of this topic.`
-            }
-          ],
-        });
-
-        response = searchResponse.choices[0].message.content;
+        console.log("Performing web search for:", message);
+        const searchResult = await searchWeb(message);
+        res.json(searchResult);
       } else {
         // Handle existing chat types
         response = await generateChatResponse(message, context, type as "deep-research" | "novel-ideas");
+        res.json({ response });
       }
 
-      res.json({ response });
     } catch (error: any) {
       console.error("Chat error:", error);
       res.status(500).json({ error: error.message });
