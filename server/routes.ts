@@ -5,59 +5,17 @@ import { analyzeQuery, generatePaperSummary, calculateRelevanceScore, generateSt
 import { searchArxiv } from "./services/arxiv";
 import { searchSemanticScholar } from "./services/semantic-scholar";
 import { insertPaperSchema } from "@shared/schema";
+import { extractTextFromDocument } from "./services/document-processor";
+import multer from "multer";
+import OpenAI from "openai";
 
-function applyMetadataFilters(paper: any, filters: any) {
-  const { yearRange, authors, venues, subjects, keywords } = filters;
+// Initialize OpenAI
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
-  // Year range check
-  if (yearRange) {
-    const paperYear = paper.metadata?.year;
-    if (paperYear) {
-      if (yearRange.start && paperYear < yearRange.start) return false;
-      if (yearRange.end && paperYear > yearRange.end) return false;
-    }
-  }
-
-  // Author check
-  if (authors?.length > 0) {
-    const paperAuthors = paper.authors.map((a: string) => a.toLowerCase());
-    if (!authors.some((author: string) =>
-      paperAuthors.some(paperAuthor => paperAuthor.includes(author.toLowerCase()))
-    )) {
-      return false;
-    }
-  }
-
-  // Venue check
-  if (venues?.length > 0 && paper.metadata?.venue) {
-    const paperVenue = paper.metadata.venue.toLowerCase();
-    if (!venues.some((venue: string) => paperVenue.includes(venue.toLowerCase()))) {
-      return false;
-    }
-  }
-
-  // Subject check
-  if (subjects?.length > 0 && paper.metadata?.subjects) {
-    const paperSubjects = paper.metadata.subjects.map((s: string) => s.toLowerCase());
-    if (!subjects.some((subject: string) =>
-      paperSubjects.some(paperSubject => paperSubject.includes(subject.toLowerCase()))
-    )) {
-      return false;
-    }
-  }
-
-  // Keyword check
-  if (keywords?.length > 0) {
-    const paperText = (paper.title + ' ' + paper.abstract).toLowerCase();
-    const hasKeyword = keywords.some((keyword: string) =>
-      paperText.includes(keyword.toLowerCase())
-    );
-    if (!hasKeyword) return false;
-  }
-
-  return true;
-}
-
+// Configure multer for file upload
+const upload = multer({ dest: "uploads/" });
 
 export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);
@@ -349,7 +307,122 @@ export async function registerRoutes(app: Express) {
     }
   });
 
+  app.post("/api/peer-review", upload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      console.log("Processing uploaded file for peer review:", req.file.originalname);
+
+      // Extract text from the uploaded document
+      const text = await extractTextFromDocument(req.file.path);
+
+      // Use OpenAI to analyze the paper
+      const prompt = `You are an expert academic peer reviewer. Review this academic paper and provide detailed feedback.
+    Consider methodology, literature review, clarity, and scientific rigor.
+
+    Paper text:
+    ${text}
+
+    Provide a JSON response with:
+    {
+      "generalFeedback": "Overall assessment of the paper",
+      "methodologyAnalysis": {
+        "strengths": ["list of methodological strengths"],
+        "gaps": ["identified gaps or weaknesses"],
+        "recommendations": ["specific suggestions for improvement"]
+      },
+      "literatureReview": {
+        "relevantPapers": [
+          {
+            "title": "paper title",
+            "authors": ["author names"],
+            "year": year,
+            "relevance": "explanation of relevance"
+          }
+        ],
+        "suggestedRemovals": [
+          {
+            "citation": "citation text",
+            "reason": "reason for suggesting removal"
+          }
+        ]
+      },
+      "writingStyle": {
+        "clarity": "assessment of writing clarity",
+        "improvements": ["suggested writing improvements"]
+      }
+    }`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+        max_tokens: 2000
+      });
+
+      const result = JSON.parse(response.choices[0].message.content);
+      res.json(result);
+    } catch (error: any) {
+      console.error("Peer review error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   return httpServer;
+}
+
+function applyMetadataFilters(paper: any, filters: any) {
+  const { yearRange, authors, venues, subjects, keywords } = filters;
+
+  // Year range check
+  if (yearRange) {
+    const paperYear = paper.metadata?.year;
+    if (paperYear) {
+      if (yearRange.start && paperYear < yearRange.start) return false;
+      if (yearRange.end && paperYear > yearRange.end) return false;
+    }
+  }
+
+  // Author check
+  if (authors?.length > 0) {
+    const paperAuthors = paper.authors.map((a: string) => a.toLowerCase());
+    if (!authors.some((author: string) =>
+      paperAuthors.some(paperAuthor => paperAuthor.includes(author.toLowerCase()))
+    )) {
+      return false;
+    }
+  }
+
+  // Venue check
+  if (venues?.length > 0 && paper.metadata?.venue) {
+    const paperVenue = paper.metadata.venue.toLowerCase();
+    if (!venues.some((venue: string) => paperVenue.includes(venue.toLowerCase()))) {
+      return false;
+    }
+  }
+
+  // Subject check
+  if (subjects?.length > 0 && paper.metadata?.subjects) {
+    const paperSubjects = paper.metadata.subjects.map((s: string) => s.toLowerCase());
+    if (!subjects.some((subject: string) =>
+      paperSubjects.some(paperSubject => paperSubject.includes(subject.toLowerCase()))
+    )) {
+      return false;
+    }
+  }
+
+  // Keyword check
+  if (keywords?.length > 0) {
+    const paperText = (paper.title + ' ' + paper.abstract).toLowerCase();
+    const hasKeyword = keywords.some((keyword: string) =>
+      paperText.includes(keyword.toLowerCase())
+    );
+    if (!hasKeyword) return false;
+  }
+
+  return true;
 }
 
 function calculateKeywordScore(text: string, keywords: string[]): number {
