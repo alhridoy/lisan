@@ -46,6 +46,7 @@ export function PeerReviewTab() {
 
   const reviewMutation = useMutation({
     mutationFn: async (formData: FormData) => {
+      console.log("Sending file for review:", formData.get("file"));
       const res = await fetch('/api/peer-review', {
         method: 'POST',
         body: formData,
@@ -57,6 +58,12 @@ export function PeerReviewTab() {
       }
 
       return data as PeerReviewResponse;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Review Complete",
+        description: "Your paper has been successfully reviewed",
+      });
     },
     onError: (error: Error) => {
       console.error("Peer review error:", error);
@@ -163,6 +170,7 @@ export function PeerReviewTab() {
 
     const formData = new FormData();
     formData.append("file", file);
+    console.log("Submitting form with file:", file.name);
     reviewMutation.mutate(formData);
     setMessages([]);
   };
@@ -194,6 +202,14 @@ export function PeerReviewTab() {
           </p>
         )}
       </form>
+
+      {reviewMutation.isError && (
+        <Card className="border-destructive">
+          <CardContent className="p-6 text-destructive">
+            {reviewMutation.error?.message || "An error occurred during analysis"}
+          </CardContent>
+        </Card>
+      )}
 
       {reviewMutation.isPending && (
         <div className="space-y-4">

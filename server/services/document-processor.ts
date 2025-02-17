@@ -36,26 +36,39 @@ export async function extractTextFromDocument(filePath: string): Promise<string>
     const fileBuffer = await fs.readFile(filePath);
     const fileExtension = path.extname(filePath).toLowerCase();
 
-    // Validate file type
+    // Process based on file type
     if (fileExtension === '.pdf') {
       try {
-        // Dynamically import pdf-parse only when needed
-        const pdf = await import('pdf-parse');
-        const pdfData = await pdf.default(fileBuffer);
+        console.log('Processing PDF file:', path.basename(filePath));
+        console.log('File size:', fileBuffer.length, 'bytes');
+
+        // Dynamically import pdf-parse
+        const PDFParser = (await import('pdf-parse')).default;
+        const pdfData = await PDFParser(fileBuffer);
+
+        if (!pdfData.text || pdfData.text.trim().length === 0) {
+          throw new Error('No text content found in PDF file');
+        }
+
         return pdfData.text;
-      } catch (error) {
-        throw new Error('Failed to parse PDF file. Please ensure the file is not corrupted.');
+      } catch (error: any) {
+        console.error('PDF processing error:', error);
+        throw new Error('Failed to process PDF file. Please ensure the file is not corrupted or password protected.');
       }
     } else if (fileExtension === '.docx') {
       try {
         const result = await mammoth.extractRawText({ buffer: fileBuffer });
+        if (!result.value || result.value.trim().length === 0) {
+          throw new Error('No text content found in DOCX file');
+        }
         return result.value;
-      } catch (error) {
-        throw new Error('Failed to parse DOCX file. Please ensure the file is not corrupted.');
+      } catch (error: any) {
+        console.error('DOCX processing error:', error);
+        throw new Error('Failed to process DOCX file. Please ensure the file is not corrupted.');
       }
+    } else {
+      throw new Error('Unsupported file type. Please upload a PDF or DOCX file.');
     }
-
-    throw new Error('Unsupported file type. Please upload a PDF or DOCX file.');
   } catch (error: any) {
     console.error('Document processing error:', error);
     throw new Error(`Failed to process document: ${error.message}`);

@@ -8,16 +8,26 @@ import { insertPaperSchema } from "@shared/schema";
 import { extractTextFromDocument } from "./services/document-processor";
 import multer from "multer";
 import OpenAI from "openai";
+import * as fs from "fs";
+import * as path from "path";
 
 // Initialize OpenAI
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Ensure uploads directory exists with proper permissions
+const uploadDir = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true, mode: 0o755 });
+}
+
 // Configure multer for file upload with file filter
 const upload = multer({
-  dest: "uploads/",
+  dest: uploadDir,
   fileFilter: (req, file, cb) => {
+    console.log('Received file:', file.originalname, 'with mimetype:', file.mimetype);
+
     // Check file mimetype
     const allowedMimeTypes = [
       'application/pdf',
@@ -385,6 +395,15 @@ export async function registerRoutes(app: Express) {
     } catch (error: any) {
       console.error("Peer review error:", error);
       res.status(500).json({ error: error.message });
+    } finally {
+      // Clean up uploaded file
+      if (req.file?.path) {
+        try {
+          await fs.promises.unlink(req.file.path);
+        } catch (error) {
+          console.error("Error deleting uploaded file:", error);
+        }
+      }
     }
   });
 
