@@ -7,6 +7,7 @@ import { SearchTab } from "@/components/SearchTab";
 import { SummaryTab } from "@/components/SummaryTab";
 import { DeepResearchTab } from "@/components/DeepResearchTab";
 import { NovelResearchTab } from "@/components/NovelResearchTab";
+import { PeerReviewTab } from "@/components/PeerReviewTab";
 import PaperDetails from "@/pages/paper-details";
 import NotFound from "@/pages/not-found";
 
@@ -19,11 +20,12 @@ function ResearchTabs() {
       </header>
 
       <Tabs defaultValue="search">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="search">Search</TabsTrigger>
           <TabsTrigger value="summary">Summary</TabsTrigger>
           <TabsTrigger value="deep-research">Deep Research</TabsTrigger>
           <TabsTrigger value="novel-ideas">Novel Ideas</TabsTrigger>
+          <TabsTrigger value="peer-review">Peer Review</TabsTrigger>
         </TabsList>
         <TabsContent value="search" className="mt-6">
           <SearchTab />
@@ -48,6 +50,21 @@ function ResearchTabs() {
             </ul>
           </div>
           <NovelResearchTab />
+        </TabsContent>
+        <TabsContent value="peer-review" className="mt-6">
+          <div className="mb-6 p-4 bg-muted rounded-lg">
+            <h3 className="font-semibold mb-2">How Peer Review Works</h3>
+            <p className="text-sm text-muted-foreground">
+              Upload your research paper draft (PDF or DOCX) and receive comprehensive feedback:
+            </p>
+            <ul className="text-sm text-muted-foreground list-disc list-inside mt-2 space-y-1">
+              <li>Expert analysis of methodology and research approach</li>
+              <li>Identification of gaps and areas for improvement</li>
+              <li>Suggestions for relevant papers to cite or remove</li>
+              <li>Assessment of writing clarity and structure</li>
+            </ul>
+          </div>
+          <PeerReviewTab />
         </TabsContent>
       </Tabs>
     </div>
