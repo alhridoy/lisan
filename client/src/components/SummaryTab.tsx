@@ -15,6 +15,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { isErrorResponse } from "@/lib/api-types";
 
 interface PaperSummary {
   title: string;
@@ -36,11 +37,16 @@ export default function SummaryTab() {
     mutationFn: async (searchQuery: string) => {
       console.log("Sending search query:", searchQuery);
       const res = await apiRequest("POST", "/api/summarize", { query: searchQuery });
-      const data = await res.json() as SummaryResponse;
+      const data = await res.json();
       console.log("Received summary response:", data);
-      return data;
+
+      if (isErrorResponse(data)) {
+        throw new Error(data.error);
+      }
+
+      return data as SummaryResponse;
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error("Summary error:", error);
       toast({
         title: "Summary Generation Failed",
@@ -61,6 +67,7 @@ export default function SummaryTab() {
   console.log("Current mutation state:", {
     isPending: summaryMutation.isPending,
     isError: summaryMutation.isError,
+    error: summaryMutation.error,
     data: summaryMutation.data
   });
 
@@ -79,12 +86,25 @@ export default function SummaryTab() {
         </Button>
       </form>
 
-      {summaryMutation.isPending ? (
+      {/* Error state */}
+      {summaryMutation.isError && (
+        <Card className="border-destructive">
+          <CardContent className="p-6 text-destructive">
+            {summaryMutation.error?.message || "An error occurred while generating the summary"}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Loading state */}
+      {summaryMutation.isPending && (
         <div className="space-y-4">
           <Skeleton className="h-32 w-full" />
           <Skeleton className="h-64 w-full" />
         </div>
-      ) : summaryMutation.data ? (
+      )}
+
+      {/* Results */}
+      {summaryMutation.data && (
         <div className="space-y-6">
           {/* Overview Card */}
           <Card>
@@ -122,7 +142,7 @@ export default function SummaryTab() {
             </div>
           )}
         </div>
-      ) : null}
+      )}
     </div>
   );
 }

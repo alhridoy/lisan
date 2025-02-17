@@ -1,33 +1,30 @@
 import OpenAI from "openai";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI({ 
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 export async function generatePaperSummary(abstract: string): Promise<string> {
-  const prompt = `Please summarize this academic paper abstract concisely while preserving key findings and methodology:\n\n${abstract}`;
+  try {
+    const prompt = `Please summarize this academic paper abstract concisely while preserving key findings and methodology:\n\n${abstract}`;
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [{ role: "user", content: prompt }],
-    max_tokens: 250
-  });
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 250
+    });
 
-  return response.choices[0].message.content || "";
-}
-
-interface QueryAnalysis {
-  filters: {
-    yearRange?: { start?: number; end?: number };
-    authors?: string[];
-    venues?: string[];
-    subjects?: string[];
-    keywords: string[];
-  };
-  enhancedQuery: string;
+    return response.choices[0].message.content || "";
+  } catch (error: any) {
+    console.error("OpenAI summary generation error:", error);
+    throw new Error(`Failed to generate summary: ${error.message}`);
+  }
 }
 
 export async function analyzeQuery(query: string): Promise<QueryAnalysis> {
-  const prompt = `Analyze this academic search query and return a JSON object with metadata filters and an enhanced query.
+  try {
+    const prompt = `Analyze this academic search query and return a JSON object with metadata filters and an enhanced query.
 Example input: "deep learning papers by Yoshua Bengio after 2020 in ICML"
 Example output: {
   "filters": {
@@ -42,55 +39,29 @@ Example output: {
 
 Query to analyze: ${query}`;
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [{ role: "user", content: prompt }],
-    response_format: { type: "json_object" }
-  });
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: prompt }],
+      response_format: { type: "json_object" }
+    });
 
-  const content = response.choices[0].message.content || "{}";
-  const result = JSON.parse(content);
+    const content = response.choices[0].message.content || "{}";
+    const result = JSON.parse(content);
 
-  return {
-    filters: {
-      yearRange: result.filters?.yearRange,
-      authors: result.filters?.authors || [],
-      venues: result.filters?.venues || [],
-      subjects: result.filters?.subjects || [],
-      keywords: result.filters?.keywords || []
-    },
-    enhancedQuery: result.enhancedQuery || query
-  };
-}
-
-export async function calculateRelevanceScore(
-  paper: { title: string; abstract: string; metadata: any },
-  query: string
-): Promise<number> {
-  const prompt = `Rate the relevance of this academic paper to the search query on a scale of 0 to 1.
-Return only a JSON object with a single "score" field containing a number.
-
-Search Query: ${query}
-Paper Title: ${paper.title}
-Paper Abstract: ${paper.abstract}
-Paper Metadata: ${JSON.stringify(paper.metadata)}`;
-
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [{ role: "user", content: prompt }],
-    response_format: { type: "json_object" }
-  });
-
-  const content = response.choices[0].message.content || "{}";
-  const result = JSON.parse(content);
-  return result.score || 0;
-}
-
-interface PaperSummaryStructure {
-  title: string;
-  mainFindings: string;
-  methodology: string;
-  outcomes: string;
+    return {
+      filters: {
+        yearRange: result.filters?.yearRange,
+        authors: result.filters?.authors || [],
+        venues: result.filters?.venues || [],
+        subjects: result.filters?.subjects || [],
+        keywords: result.filters?.keywords || []
+      },
+      enhancedQuery: result.enhancedQuery || query
+    };
+  } catch (error: any) {
+    console.error("OpenAI query analysis error:", error);
+    throw new Error(`Failed to analyze query: ${error.message}`);
+  }
 }
 
 export async function generateStructuredSummaries(
@@ -100,11 +71,22 @@ export async function generateStructuredSummaries(
   summaries: PaperSummaryStructure[];
   overview: string;
 }> {
-  const prompt = `Analyze these academic papers related to "${query}" and create:
-1. A structured summary for each paper with main findings, methodology, and outcomes
-2. A high-level overview of the collective insights
+  try {
+    console.log("Generating structured summaries for papers:", papers.length);
 
-Return a JSON object with:
+    if (!papers.length) {
+      return {
+        summaries: [],
+        overview: "No papers found to summarize."
+      };
+    }
+
+    const prompt = `Analyze these academic papers related to "${query}" and provide a structured analysis.
+
+Papers to analyze:
+${papers.map(p => `Title: ${p.title}\nAbstract: ${p.abstract}\n---`).join('\n')}
+
+Provide a JSON response in this format:
 {
   "summaries": [
     {
@@ -115,23 +97,72 @@ Return a JSON object with:
     }
   ],
   "overview": "synthesis of key themes and insights across all papers"
+}`;
+
+    console.log("Sending request to OpenAI...");
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: prompt }],
+      response_format: { type: "json_object" },
+      max_tokens: 1500
+    });
+
+    const content = response.choices[0].message.content || "{}";
+    console.log("Received response from OpenAI");
+
+    const result = JSON.parse(content);
+    return {
+      summaries: result.summaries || [],
+      overview: result.overview || "No overview available"
+    };
+  } catch (error: any) {
+    console.error("OpenAI structured summary generation error:", error);
+    throw new Error(`Failed to generate structured summaries: ${error.message}`);
+  }
 }
 
-Papers to analyze:
-${papers.map(p => `Title: ${p.title}\nAbstract: ${p.abstract}\n---`).join('\n')}`;
+export async function calculateRelevanceScore(
+  paper: { title: string; abstract: string; metadata: any },
+  query: string
+): Promise<number> {
+  try {
+    const prompt = `Rate the relevance of this academic paper to the search query on a scale of 0 to 1.
+Return only a JSON object with a single "score" field containing a number.
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [{ role: "user", content: prompt }],
-    response_format: { type: "json_object" },
-    max_tokens: 1500
-  });
+Search Query: ${query}
+Paper Title: ${paper.title}
+Paper Abstract: ${paper.abstract}
+Paper Metadata: ${JSON.stringify(paper.metadata)}`;
 
-  const content = response.choices[0].message.content || "{}";
-  const result = JSON.parse(content);
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: prompt }],
+      response_format: { type: "json_object" }
+    });
 
-  return {
-    summaries: result.summaries || [],
-    overview: result.overview || "No overview available"
+    const content = response.choices[0].message.content || "{}";
+    const result = JSON.parse(content);
+    return result.score || 0;
+  } catch (error: any) {
+    console.error("OpenAI relevance score calculation error:", error);
+    throw new Error(`Failed to calculate relevance score: ${error.message}`);
+  }
+}
+
+interface QueryAnalysis {
+  filters: {
+    yearRange?: { start?: number; end?: number };
+    authors?: string[];
+    venues?: string[];
+    subjects?: string[];
+    keywords: string[];
   };
+  enhancedQuery: string;
+}
+
+interface PaperSummaryStructure {
+  title: string;
+  mainFindings: string;
+  methodology: string;
+  outcomes: string;
 }
