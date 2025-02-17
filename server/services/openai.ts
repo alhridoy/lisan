@@ -189,10 +189,10 @@ Return a JSON object with:
       "studyType": "Type of research (e.g., Empirical, Theoretical, Case Study)",
       "researchFocus": "Main research questions or objectives",
       "analysis": "Key findings and implications",
-      "references": ["Full academic citations in a consistent format"]
+      "references": ["Full academic citations in the format: LastName, FirstName. (Year). Title. Journal/Conference, etc."]
     }
   ],
-  "fullText": "A complete report including: Title, Date, Abstract, Methods, Results (with characteristics of included studies), Thematic Analysis, Cross-Study Analysis, and References. Format similar to an academic paper with proper sections and citations."
+  "fullText": "A complete report including: Title, Date, Abstract, Methods, Results (with characteristics of included studies), Thematic Analysis, Cross-Study Analysis, and References. For References, ensure each entry follows proper academic citation format with author names, year, title, and publication details. For unknown authors, use the format: LastName, FirstName or Organization Name if available, otherwise omit author field and start with title."
 }`;
 
     console.log("Sending request to OpenAI for deep research analysis...");

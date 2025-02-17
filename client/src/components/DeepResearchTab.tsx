@@ -84,6 +84,15 @@ export function DeepResearchTab() {
     return section.trim();
   };
 
+  // Helper function to format references
+  const formatReference = (reference: string) => {
+    // Handle cases where the reference starts with "Author Unknown"
+    if (reference.startsWith("Author Unknown")) {
+      return reference.replace("Author Unknown. (n.d.)", "").trim();
+    }
+    return reference.trim();
+  };
+
   return (
     <div className="space-y-8">
       <form onSubmit={handleSearch} className="flex gap-2">
@@ -213,7 +222,9 @@ export function DeepResearchTab() {
                     .split("\n")
                     .filter(ref => ref.trim())
                     .map((reference, index) => (
-                      <p key={index} className="text-sm">{reference.trim()}</p>
+                      <p key={index} className="text-sm">
+                        {formatReference(reference)}
+                      </p>
                     ))}
                 </div>
               </div>
