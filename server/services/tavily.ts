@@ -42,6 +42,7 @@ export async function searchWeb(query: string): Promise<{
     // Then, search using Tavily API for each query
     const allSearchResults = [];
     for (const searchQuery of searchQueries) {
+      console.log("Searching for query:", searchQuery);
       const searchResponse = await fetch(API_URL, {
         method: 'POST',
         headers: {
@@ -54,7 +55,7 @@ export async function searchWeb(query: string): Promise<{
           include_answer: true,
           include_domains: [],
           exclude_domains: [],
-          max_results: 20, // Increased from 10 to get more results
+          max_results: 40, // Increased to get more comprehensive results
         })
       });
 
@@ -66,20 +67,34 @@ export async function searchWeb(query: string): Promise<{
       allSearchResults.push(...(searchData.results || []));
     }
 
-    console.log("Received search results from Tavily");
+    console.log(`Total results before deduplication: ${allSearchResults.length}`);
 
-    // Deduplicate results by URL
+    // Deduplicate results by URL and filter out undefined/null entries
     const uniqueResults = Array.from(
-      new Map(allSearchResults.map(r => [r.url, r])).values()
+      new Map(
+        allSearchResults
+          .filter(r => r && r.url)
+          .map(r => [r.url, r])
+      ).values()
     );
 
-    // Extract URLs and domains for citations
-    const citations = uniqueResults.map((result: any) => ({
-      url: result.url,
-      domain: new URL(result.url).hostname
-    }));
+    console.log(`Unique results after deduplication: ${uniqueResults.length}`);
 
-    // Use OpenAI to generate a coherent response from all search results
+    // Extract URLs and domains for citations
+    const citations = uniqueResults.map((result: any) => {
+      try {
+        const domain = new URL(result.url).hostname;
+        return {
+          url: result.url,
+          domain: domain
+        };
+      } catch (e) {
+        console.error("Error parsing URL:", result.url);
+        return null;
+      }
+    }).filter(citation => citation !== null) as Array<{url: string, domain: string}>;
+
+    // Use OpenAI to generate a coherent response
     const openai = new OpenAI();
     console.log("Generating response with OpenAI");
 
@@ -91,8 +106,10 @@ export async function searchWeb(query: string): Promise<{
           content: `You are a research assistant helping to analyze web search results. 
           Synthesize the information into a clear, comprehensive response. 
           Focus on accuracy and cite specific sources when presenting information.
-          Present information in a clear, structured format using bullet points when appropriate.
-          Include specific mentions of sources using their domain names when presenting key information.`
+          Present information in a structured format using bullet points.
+          Include specific mentions of sources using their domain names when presenting key information.
+          Example: "According to v7labs.com, ..."
+          Keep your response focused and concise.`
         },
         {
           role: "user",
@@ -110,7 +127,7 @@ export async function searchWeb(query: string): Promise<{
       ]
     });
 
-    console.log("Generated response from OpenAI");
+    console.log(`Final number of citations: ${citations.length}`);
 
     return {
       response: completion.choices[0].message.content || "No response generated",
