@@ -15,7 +15,7 @@ function ResearchTabs() {
   return (
     <div className="container py-8 space-y-6">
       <header className="text-center space-y-2">
-        <h1 className="text-4xl font-bold tracking-tight">Academic Research Assistant</h1>
+        <h1 className="text-4xl font-bold tracking-tight">Your AI-Powered Research Companion</h1>
         <p className="text-muted-foreground">Discover, analyze, and generate novel research ideas with AI-powered insights</p>
       </header>
 
