@@ -1,16 +1,14 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "framework": "vite",
+  "framework": "nextjs",
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/$1.js"
+      "source": "/api/:path*",
+      "destination": "/api/:path*"
     },
     {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "destination": "/"
     }
   ],
   "env": {
