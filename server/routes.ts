@@ -291,6 +291,184 @@ export async function registerRoutes(app: Express) {
     }
   });
 
+  app.post("/api/recommendations", async (req, res) => {
+    try {
+      const { paperId, topic } = req.body;
+
+      if (!paperId && !topic) {
+        return res.status(400).json({ error: "Either paperId or topic is required" });
+      }
+
+      const openai = new OpenAI();
+
+      // Get relevant papers from storage or search
+      let papers = [];
+      if (paperId) {
+        const paper = await storage.findPaperBySourceId(paperId);
+        if (paper) {
+          // Search for related papers
+          const [arxivResults, semanticScholarResults] = await Promise.all([
+            searchArxiv(paper.title),
+            searchSemanticScholar(paper.title)
+          ]);
+          papers = [...arxivResults, ...semanticScholarResults];
+        }
+      } else if (topic) {
+        const [arxivResults, semanticScholarResults] = await Promise.all([
+          searchArxiv(topic),
+          searchSemanticScholar(topic)
+        ]);
+        papers = [...arxivResults, ...semanticScholarResults];
+      }
+
+      // Use OpenAI to analyze and generate recommendations
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: `You are a research recommendation system. Analyze the papers and provide:
+            1. A list of recommended papers with justification
+            2. Emerging research trends in this area
+            3. Potential future research directions
+
+            Format the response as JSON with the following structure:
+            {
+              "recommendations": [
+                {
+                  "title": string,
+                  "reason": string,
+                  "relevance_score": number
+                }
+              ],
+              "trends": [
+                {
+                  "trend": string,
+                  "description": string,
+                  "supporting_evidence": string[]
+                }
+              ],
+              "future_directions": [
+                {
+                  "direction": string,
+                  "rationale": string,
+                  "potential_impact": string
+                }
+              ]
+            }`
+          },
+          {
+            role: "user",
+            content: `Papers to analyze:
+            ${papers.map(p => `
+              Title: ${p.title}
+              Abstract: ${p.abstract}
+              Year: ${p.metadata?.year || 'Unknown'}
+            `).join('\n')}
+            `
+          }
+        ],
+        response_format: { type: "json_object" }
+      });
+
+      const analysis = JSON.parse(completion.choices[0].message.content);
+      res.json(analysis);
+    } catch (error: any) {
+      console.error("Recommendations error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/research-trends", async (req, res) => {
+    try {
+      const { topic, timeframe } = req.body;
+
+      if (!topic) {
+        return res.status(400).json({ error: "Topic is required" });
+      }
+
+      // Search for papers in the specified topic
+      const [arxivResults, semanticScholarResults] = await Promise.all([
+        searchArxiv(topic),
+        searchSemanticScholar(topic)
+      ]);
+
+      const papers = [...arxivResults, ...semanticScholarResults];
+
+      // Use OpenAI to analyze trends
+      const openai = new OpenAI();
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: `You are a research trend analyzer. Analyze the papers and provide:
+            1. Key research trends over time
+            2. Emerging methodologies and approaches
+            3. Gaps in current research
+            4. Future predictions
+
+            Format the response as JSON with the following structure:
+            {
+              "trends": [
+                {
+                  "name": string,
+                  "description": string,
+                  "timeline": string,
+                  "key_papers": string[],
+                  "impact_score": number
+                }
+              ],
+              "methodologies": [
+                {
+                  "name": string,
+                  "description": string,
+                  "advantages": string[],
+                  "adoption_rate": string
+                }
+              ],
+              "research_gaps": [
+                {
+                  "area": string,
+                  "description": string,
+                  "opportunity_level": string
+                }
+              ],
+              "predictions": [
+                {
+                  "prediction": string,
+                  "likelihood": string,
+                  "potential_impact": string,
+                  "timeframe": string
+                }
+              ]
+            }`
+          },
+          {
+            role: "user",
+            content: `Topic: ${topic}
+            Timeframe: ${timeframe || 'Recent'}
+
+            Papers to analyze:
+            ${papers.map(p => `
+              Title: ${p.title}
+              Abstract: ${p.abstract}
+              Year: ${p.metadata?.year || 'Unknown'}
+            `).join('\n')}
+            `
+          }
+        ],
+        response_format: { type: "json_object" }
+      });
+
+      const analysis = JSON.parse(completion.choices[0].message.content);
+      res.json(analysis);
+    } catch (error: any) {
+      console.error("Research trends analysis error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   return httpServer;
 }
 

@@ -7,6 +7,7 @@ import { SearchTab } from "@/components/SearchTab";
 import { SummaryTab } from "@/components/SummaryTab";
 import { DeepResearchTab } from "@/components/DeepResearchTab";
 import { NovelResearchTab } from "@/components/NovelResearchTab";
+import { ResearchInsightsTab } from "@/components/ResearchInsightsTab";
 import PaperDetails from "@/pages/paper-details";
 import NotFound from "@/pages/not-found";
 
@@ -19,11 +20,12 @@ function ResearchTabs() {
       </header>
 
       <Tabs defaultValue="search">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="search">Search</TabsTrigger>
           <TabsTrigger value="summary">Summary</TabsTrigger>
           <TabsTrigger value="deep-research">Deep Research</TabsTrigger>
           <TabsTrigger value="novel-ideas">Novel Ideas</TabsTrigger>
+          <TabsTrigger value="research-insights">Research Insights</TabsTrigger>
         </TabsList>
         <TabsContent value="search" className="mt-6">
           <SearchTab />
@@ -48,6 +50,21 @@ function ResearchTabs() {
             </ul>
           </div>
           <NovelResearchTab />
+        </TabsContent>
+        <TabsContent value="research-insights" className="mt-6">
+          <div className="mb-6 p-4 bg-muted rounded-lg">
+            <h3 className="font-semibold mb-2">Research Trends and Recommendations</h3>
+            <p className="text-sm text-muted-foreground">
+              Get AI-powered insights into research trends and personalized paper recommendations:
+            </p>
+            <ul className="text-sm text-muted-foreground list-disc list-inside mt-2 space-y-1">
+              <li>Discover emerging research trends and methodologies</li>
+              <li>Get personalized paper recommendations</li>
+              <li>Identify research gaps and opportunities</li>
+              <li>Explore potential future research directions</li>
+            </ul>
+          </div>
+          <ResearchInsightsTab />
         </TabsContent>
       </Tabs>
     </div>
