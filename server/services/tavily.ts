@@ -11,7 +11,7 @@ async function generateSearchQueries(query: string): Promise<string[]> {
     messages: [
       {
         role: "system",
-        content: "You are a search expert. Generate 3-5 specific search queries to comprehensively research this topic. Return only the queries, one per line."
+        content: "You are a search expert. Generate 3-5 specific search queries to comprehensively research this topic. Each query should focus on different aspects or interpretations of the topic. Return only the queries, one per line."
       },
       {
         role: "user",
@@ -39,39 +39,47 @@ export async function searchWeb(query: string): Promise<{
     const searchQueries = await generateSearchQueries(query);
     console.log("Generated search queries:", searchQueries);
 
-    // Then, search using Tavily API
-    const searchResponse = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${TAVILY_API_KEY}`
-      },
-      body: JSON.stringify({
-        query: query,
-        search_depth: "advanced",
-        include_answer: true,
-        include_domains: [],
-        exclude_domains: [],
-        max_results: 10,
-      })
-    });
+    // Then, search using Tavily API for each query
+    const allSearchResults = [];
+    for (const searchQuery of searchQueries) {
+      const searchResponse = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${TAVILY_API_KEY}`
+        },
+        body: JSON.stringify({
+          query: searchQuery,
+          search_depth: "advanced",
+          include_answer: true,
+          include_domains: [],
+          exclude_domains: [],
+          max_results: 20, // Increased from 10 to get more results
+        })
+      });
 
-    if (!searchResponse.ok) {
-      throw new Error(`Tavily API error: ${searchResponse.statusText}`);
+      if (!searchResponse.ok) {
+        throw new Error(`Tavily API error: ${searchResponse.statusText}`);
+      }
+
+      const searchData = await searchResponse.json();
+      allSearchResults.push(...(searchData.results || []));
     }
 
-    const searchData = await searchResponse.json();
     console.log("Received search results from Tavily");
 
-    const searchResults = searchData.results || [];
+    // Deduplicate results by URL
+    const uniqueResults = Array.from(
+      new Map(allSearchResults.map(r => [r.url, r])).values()
+    );
 
     // Extract URLs and domains for citations
-    const citations = searchResults.map((result: any) => ({
+    const citations = uniqueResults.map((result: any) => ({
       url: result.url,
       domain: new URL(result.url).hostname
     }));
 
-    // Use OpenAI to generate a coherent response from the search results
+    // Use OpenAI to generate a coherent response from all search results
     const openai = new OpenAI();
     console.log("Generating response with OpenAI");
 
@@ -83,14 +91,15 @@ export async function searchWeb(query: string): Promise<{
           content: `You are a research assistant helping to analyze web search results. 
           Synthesize the information into a clear, comprehensive response. 
           Focus on accuracy and cite specific sources when presenting information.
-          Present information in a clear, structured format using bullet points when appropriate.`
+          Present information in a clear, structured format using bullet points when appropriate.
+          Include specific mentions of sources using their domain names when presenting key information.`
         },
         {
           role: "user",
           content: `Search query: "${query}"
 
           Search results:
-          ${searchResults.map((r: any) => `
+          ${uniqueResults.map((r: any) => `
           Title: ${r.title}
           Content: ${r.content}
           URL: ${r.url}
