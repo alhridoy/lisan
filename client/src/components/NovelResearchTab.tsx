@@ -46,9 +46,11 @@ interface RankedIdea {
 interface Message {
   role: "user" | "assistant";
   content: string;
-  citations?: string[];
+  citations?: Array<{url: string, domain: string}>;
   searchStatus?: {
     queries: string[];
+    searched?: boolean;
+    sourcesFound?: number;
   };
 }
 
@@ -68,6 +70,9 @@ export function NovelResearchTab() {
       }
 
       return data as RankedIdea[];
+    },
+    onSuccess: (data) => {
+      console.log("Generated ideas:", data);
     },
     onError: (error: Error) => {
       console.error("Novel ideas generation error:", error);
@@ -167,15 +172,18 @@ export function NovelResearchTab() {
     await chatMutation.mutate(message, type);
   };
 
-  const renderScore = (score: number, label: string) => (
-    <div className="space-y-2">
-      <div className="flex justify-between text-sm">
-        <span>{label}</span>
-        <span>{score.toFixed(1)}/10</span>
+  const renderScore = (score: number | undefined, label: string) => {
+    if (typeof score !== 'number') return null;
+    return (
+      <div className="space-y-2">
+        <div className="flex justify-between text-sm">
+          <span>{label}</span>
+          <span>{score.toFixed(1)}/10</span>
+        </div>
+        <Progress value={score * 10} className="h-2" />
       </div>
-      <Progress value={score * 10} className="h-2" />
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="space-y-8">
@@ -214,9 +222,11 @@ export function NovelResearchTab() {
                   <CardHeader>
                     <CardTitle className="flex items-center justify-between">
                       <span>{rankedIdea.idea.title}</span>
-                      <span className="text-lg font-semibold">
-                        Score: {rankedIdea.evaluation.overall_score.toFixed(1)}/10
-                      </span>
+                      {rankedIdea.evaluation?.overall_score !== undefined && (
+                        <span className="text-lg font-semibold">
+                          Score: {rankedIdea.evaluation.overall_score.toFixed(1)}/10
+                        </span>
+                      )}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-6">
@@ -229,9 +239,13 @@ export function NovelResearchTab() {
                       </div>
                       <div className="space-y-4">
                         <h3 className="font-semibold">Evaluation Scores</h3>
-                        {renderScore(rankedIdea.evaluation.novelty.score, "Novelty")}
-                        {renderScore(rankedIdea.evaluation.feasibility.score, "Feasibility")}
-                        {renderScore(rankedIdea.evaluation.potential_impact.score, "Impact")}
+                        {rankedIdea.evaluation && (
+                          <>
+                            {renderScore(rankedIdea.evaluation.novelty?.score, "Novelty")}
+                            {renderScore(rankedIdea.evaluation.feasibility?.score, "Feasibility")}
+                            {renderScore(rankedIdea.evaluation.potential_impact?.score, "Impact")}
+                          </>
+                        )}
                       </div>
                     </div>
                     <div className="space-y-4">
@@ -239,12 +253,16 @@ export function NovelResearchTab() {
                       <p>{rankedIdea.idea.existing_methods}</p>
                       <h3 className="font-semibold">Proposed Method</h3>
                       <p>{rankedIdea.idea.proposed_method}</p>
-                      <h3 className="font-semibold">Related Papers</h3>
-                      <ul className="list-disc list-inside space-y-1">
-                        {rankedIdea.evaluation.related_papers.map((paper, i) => (
-                          <li key={i} className="text-sm text-muted-foreground">{paper}</li>
-                        ))}
-                      </ul>
+                      {rankedIdea.evaluation?.related_papers?.length > 0 && (
+                        <>
+                          <h3 className="font-semibold">Related Papers</h3>
+                          <ul className="list-disc list-inside space-y-1">
+                            {rankedIdea.evaluation.related_papers.map((paper, i) => (
+                              <li key={i} className="text-sm text-muted-foreground">{paper}</li>
+                            ))}
+                          </ul>
+                        </>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
